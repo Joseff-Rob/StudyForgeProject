@@ -20,22 +20,47 @@ class MainMenu extends StatelessWidget {
     return Scaffold(
       backgroundColor: Color(0xFFDCE6F0),
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.settings),
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SettingsPage()),
-            );
-          },
+        backgroundColor: Colors.blueGrey,
+
+        leading: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(8),
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const MainMenu(),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Image.asset(
+                'assets/images/StudyForgeLogo.png',
+                fit: BoxFit.contain,
+              ),
+            ),
+          ),
         ),
-        title: const Text("StudyForge"),
+
+        title: const SizedBox.shrink(),
+
+        // ☰ DROPDOWN MENU WITH ICONS
         actions: [
           PopupMenuButton<String>(
+            icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'profile') {
                 navigateTo(context, "View Profile pressed");
-              } else if (value == 'Logout') {
+              } else if (value == 'settings') {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const SettingsPage(),
+                  ),
+                );
+              } else if (value == 'logout') {
                 showDialog(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -50,30 +75,57 @@ class MainMenu extends StatelessWidget {
                         onPressed: () {
                           Navigator.pushAndRemoveUntil(
                             context,
-                            MaterialPageRoute(builder: (context) => const LoginRegisterPage()),
-                              (route) => false,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                              const LoginRegisterPage(),
+                            ),
+                                (route) => false,
                           );
                         },
                         child: const Text("Logout"),
                       ),
                     ],
-                  )
+                  ),
                 );
               }
             },
+
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: 'profile',
-                child: Text('View Profile'),
+                child: Row(
+                  children: [
+                    Icon(Icons.person),
+                    SizedBox(width: 10),
+                    Text('View Profile'),
+                  ],
+                ),
               ),
               PopupMenuItem(
-                value: 'Logout',
-                child: Text('Log Out')
-              )
+                value: 'settings',
+                child: Row(
+                  children: [
+                    Icon(Icons.settings),
+                    SizedBox(width: 10),
+                    Text('Settings'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout),
+                    SizedBox(width: 10),
+                    Text('Log Out'),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
       ),
+
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),

@@ -28,7 +28,17 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 'assets/images/StudyForgeLogo.png',
                 height: 150,
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 16),
+
+              Text(
+                "Where smart study begins.",
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
 
               // Title
               Text(
