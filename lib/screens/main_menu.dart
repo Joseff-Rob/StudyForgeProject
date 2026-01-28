@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'message_page.dart';
 import 'settings.dart';
-import 'login_register.dart';
+import 'profile_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 
@@ -54,7 +54,12 @@ class MainMenu extends StatelessWidget {
             icon: const Icon(Icons.more_vert),
             onSelected: (value) {
               if (value == 'profile') {
-                navigateTo(context, "View Profile pressed");
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ProfilePage(),
+                  ),
+                );
               } else if (value == 'settings') {
                 Navigator.push(
                   context,
