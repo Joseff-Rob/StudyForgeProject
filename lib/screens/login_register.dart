@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'main_menu.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/app_user.dart';
+import '../services/firestore_user_service.dart';
 
 class LoginRegisterPage extends StatefulWidget {
   const LoginRegisterPage({super.key});
@@ -10,41 +13,36 @@ class LoginRegisterPage extends StatefulWidget {
 }
 
 class _LoginRegisterPageState extends State<LoginRegisterPage> {
-  bool isLogin = true; // Toggle between Login/Register
+  bool isLogin = true;
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController usernameController = TextEditingController();
   bool isLoading = false;
   String? errorMessage;
 
+  final FirestoreUserService userService = FirestoreUserService();
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFDCE6F0),
+      backgroundColor: const Color(0xFFDCE6F0),
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Logo
               Image.asset(
                 'assets/images/StudyForgeLogo.png',
                 height: 150,
               ),
               const SizedBox(height: 16),
-
-              Text(
+              const Text(
                 "Where smart study begins.",
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
-
-              // Title
               Text(
                 isLogin ? "Login" : "Register",
                 style: const TextStyle(
@@ -55,7 +53,19 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
               ),
               const SizedBox(height: 24),
 
-              // Email field
+              // Username (only for registration)
+              if (!isLogin) ...[
+                TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(
+                    labelText: "Username",
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Email
               TextField(
                 controller: emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -66,7 +76,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
               ),
               const SizedBox(height: 16),
 
-              // Password field
+              // Password
               TextField(
                 controller: passwordController,
                 obscureText: true,
@@ -98,20 +108,65 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       );
                     } else {
                       // REGISTER
-                      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                      final username = usernameController.text.trim();
+
+                      if (username.isEmpty) {
+                        setState(() {
+                          errorMessage = "Username cannot be empty";
+                        });
+                        return;
+                      }
+
+                      // Check username uniqueness
+                      if (await userService.isUsernameTaken(username)) {
+                        setState(() {
+                          errorMessage = "Username already taken";
+                        });
+                        return;
+                      }
+
+                      // Create user
+                      UserCredential userCredential = await FirebaseAuth.instance
+                          .createUserWithEmailAndPassword(
                         email: emailController.text.trim(),
                         password: passwordController.text.trim(),
                       );
+
+                      final user = userCredential.user;
+                      if (user == null || user.email == null) {
+                        setState(() {
+                          errorMessage = "Failed to create user";
+                        });
+                        return;
+                      }
+
+                      // Update displayName in FirebaseAuth
+                      await user.updateDisplayName(username);
+
+                      // Save in Firestore
+                      AppUser newUser = AppUser(
+                        uid: user.uid,
+                        email: user.email!,
+                        username: username,
+                      );
+                      await userService.createUser(newUser);
                     }
 
-                    // SUCCESS → navigate to MainMenu
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const MainMenu()),
-                    );
+                    if (mounted) {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const MainMenu()),
+                      );
+                    }
                   } on FirebaseAuthException catch (e) {
                     setState(() {
                       errorMessage = e.message;
+                    });
+                  } catch (e, stack) {
+                    print("Error: $e");
+                    print(stack);
+                    setState(() {
+                      errorMessage = e.toString();
                     });
                   } finally {
                     setState(() {
@@ -119,13 +174,17 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                     });
                   }
                 },
-
-                  child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : Text(isLogin ? "Login" : "Register"),
-
+                child: isLoading
+                    ? const SizedBox(
+                  height: 20,
+                  width: 20,
+                  child:
+                  CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                )
+                    : Text(isLogin ? "Login" : "Register"),
               ),
               const SizedBox(height: 16),
+
               if (errorMessage != null) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -135,7 +194,6 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 ),
               ],
 
-              // Toggle Login/Register
               TextButton(
                 onPressed: () {
                   setState(() {
