@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'main_menu.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginRegisterPage extends StatefulWidget {
   const LoginRegisterPage({super.key});
@@ -12,6 +13,9 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
   bool isLogin = true; // Toggle between Login/Register
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  bool isLoading = false;
+  String? errorMessage;
+
 
   @override
   Widget build(BuildContext context) {
@@ -79,17 +83,57 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   textStyle: const TextStyle(fontSize: 16),
                 ),
-                onPressed: () {
-                  // For now, just navigate to main menu
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const MainMenu()),
-                  );
+                onPressed: () async {
+                  setState(() {
+                    isLoading = true;
+                    errorMessage = null;
+                  });
+
+                  try {
+                    if (isLogin) {
+                      // LOGIN
+                      await FirebaseAuth.instance.signInWithEmailAndPassword(
+                        email: emailController.text.trim(),
+                        password: passwordController.text.trim(),
+                      );
+                    } else {
+                      // REGISTER
+                      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+                        email: emailController.text.trim(),
+                        password: passwordController.text.trim(),
+                      );
+                    }
+
+                    // SUCCESS → navigate to MainMenu
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) => const MainMenu()),
+                    );
+                  } on FirebaseAuthException catch (e) {
+                    setState(() {
+                      errorMessage = e.message;
+                    });
+                  } finally {
+                    setState(() {
+                      isLoading = false;
+                    });
+                  }
                 },
-                child: Text(isLogin ? "Login" : "Register"),
+
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(isLogin ? "Login" : "Register"),
+
               ),
               const SizedBox(height: 16),
+              if (errorMessage != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  errorMessage!,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
+                ),
+              ],
 
               // Toggle Login/Register
               TextButton(
