@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'message_page.dart';
 import 'settings.dart';
 import 'login_register.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 class MainMenu extends StatelessWidget {
   const MainMenu({super.key});
@@ -72,15 +74,9 @@ class MainMenu extends StatelessWidget {
                         child: const Text("Cancel"),
                       ),
                       TextButton(
-                        onPressed: () {
-                          Navigator.pushAndRemoveUntil(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) =>
-                              const LoginRegisterPage(),
-                            ),
-                                (route) => false,
-                          );
+                        onPressed: () async {
+                          await FirebaseAuth.instance.signOut();
+                          Navigator.pop(context); // close the dialog
                         },
                         child: const Text("Logout"),
                       ),

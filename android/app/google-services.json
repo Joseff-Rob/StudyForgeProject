@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "189080001206",
+    "project_id": "studyforgeproject",
+    "storage_bucket": "studyforgeproject.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:189080001206:android:c341164fa4e690a8f82417",
+        "android_client_info": {
+          "package_name": "com.example.untitled"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBzM8_CV6pfQOPhfIErfMbWxHNNrKNpmAM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
