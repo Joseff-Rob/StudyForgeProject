@@ -38,7 +38,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
               ),
               const SizedBox(height: 16),
               const Text(
-                "Where smart study begins.",
+                "Where knowledge is forged.",
                 style: TextStyle(fontSize: 12, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
@@ -152,12 +152,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       await userService.createUser(newUser);
                     }
 
-                    if (mounted) {
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(builder: (_) => const MainMenu()),
-                      );
-                    }
+
                   } on FirebaseAuthException catch (e) {
                     setState(() {
                       errorMessage = e.message;

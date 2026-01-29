@@ -38,22 +38,18 @@ class MyApp extends StatelessWidget {
             stream: FirebaseAuth.instance.authStateChanges(),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
-                // Show a loading screen while checking
                 return const Scaffold(
                   body: Center(child: CircularProgressIndicator()),
                 );
               }
 
               if (snapshot.hasData) {
-                // User is logged in
-                return const MainMenu();
+                return const MainMenu(); // logged in
               }
 
-              // User not logged in
-              return const LoginRegisterPage();
+              return const LoginRegisterPage(); // logged out
             },
           ),
-
         );
       },
     );
