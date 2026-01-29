@@ -1,7 +1,6 @@
+import 'package:StudyForgeProject/screens/splash_screen.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'screens/login_register.dart';
-import 'screens/main_menu.dart';
 import 'utils/font_scale.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -34,22 +33,8 @@ class MyApp extends StatelessWidget {
               child: child!,
             );
           },
-          home: StreamBuilder<User?>(
-            stream: FirebaseAuth.instance.authStateChanges(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
+          home: const SplashScreen(),
 
-              if (snapshot.hasData) {
-                return const MainMenu(); // logged in
-              }
-
-              return const LoginRegisterPage(); // logged out
-            },
-          ),
         );
       },
     );

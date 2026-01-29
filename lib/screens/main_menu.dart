@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'message_page.dart';
 import 'settings.dart';
@@ -24,34 +25,12 @@ class MainMenu extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.blueGrey,
 
-        leading: MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(8),
-            onTap: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MainMenu(),
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Image.asset(
-                'assets/images/StudyForgeLogo.png',
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-        ),
-
         title: const SizedBox.shrink(),
 
         // ☰ DROPDOWN MENU WITH ICONS
         actions: [
           PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert),
+            icon: const Icon(Icons.more_vert, color: Colors.white),
             onSelected: (value) {
               if (value == 'profile') {
                 Navigator.push(
@@ -134,42 +113,75 @@ class MainMenu extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // LOGO
-              Image.asset(
-                'assets/images/StudyForgeLogo.png',
-                height: 160,
-              ),
-              const SizedBox(height: 32),
+              Expanded(
+                child: StreamBuilder<DocumentSnapshot>(
+                  stream: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(FirebaseAuth.instance.currentUser!.uid)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-              // BUTTONS
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  textStyle: const TextStyle(fontSize: 16),
+                    if (!snapshot.hasData || !snapshot.data!.exists) {
+                      return const Center(child: Text("Welcome!"));
+                    }
+
+                    final data = snapshot.data!.data() as Map<String, dynamic>;
+                    final username = data['username'] ?? "User";
+
+                    return Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(
+                          "Welcome, $username",
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(height: 32),
+                        Image.asset(
+                          'assets/images/StudyForgeLogo.png',
+                          height: 160,
+                        ),
+                        const SizedBox(height: 32),
+
+                        // BUTTONS
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            textStyle: const TextStyle(fontSize: 16),
+                          ),
+                          onPressed: () =>
+                              navigateTo(context, "Start a lesson with AI pressed"),
+                          child: const Text("Start a lesson with AI"),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            textStyle: const TextStyle(fontSize: 16),
+                          ),
+                          onPressed: () =>
+                              navigateTo(context, "Create Flashcards pressed"),
+                          child: const Text("Create Flashcards"),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 18),
+                            textStyle: const TextStyle(fontSize: 16),
+                          ),
+                          onPressed: () =>
+                              navigateTo(context, "View Flashcards pressed"),
+                          child: const Text("View Flashcards"),
+                        ),
+                      ],
+                    );
+                  },
                 ),
-                onPressed: () =>
-                    navigateTo(context, "Start a lesson with AI pressed"),
-                child: const Text("Start a lesson with AI"),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  textStyle: const TextStyle(fontSize: 16),
-                ),
-                onPressed: () =>
-                    navigateTo(context, "Create Flashcards pressed"),
-                child: const Text("Create Flashcards"),
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  textStyle: const TextStyle(fontSize: 16),
-                ),
-                onPressed: () =>
-                    navigateTo(context, "View Flashcards pressed"),
-                child: const Text("View Flashcards"),
               ),
             ],
           ),
