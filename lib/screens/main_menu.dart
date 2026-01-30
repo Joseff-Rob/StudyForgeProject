@@ -1,3 +1,4 @@
+import 'package:StudyForgeProject/screens/teach_to_learn_ai.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'message_page.dart';
@@ -154,8 +155,14 @@ class MainMenu extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             textStyle: const TextStyle(fontSize: 16),
                           ),
-                          onPressed: () =>
-                              navigateTo(context, "Start a lesson with AI pressed"),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const TeachToLearnAi(),
+                              ),
+                            );
+                          },
                           child: const Text("Start a lesson with AI"),
                         ),
                         const SizedBox(height: 16),

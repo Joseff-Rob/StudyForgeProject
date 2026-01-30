@@ -18,7 +18,6 @@ class _SplashScreenState extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // Optional: make the circular indicator spin
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
@@ -28,8 +27,8 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initializeApp() async {
-    // Simulate loading delay or do real init
-    await Future.delayed(const Duration(seconds: 2));
+    // Simulate loading delay.
+    await Future.delayed(const Duration(seconds: 3));
 
     final user = FirebaseAuth.instance.currentUser;
 
