@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'login_register.dart';
-import 'main_menu.dart';
+import '../main.dart'; // contains AuthGate
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -27,22 +25,12 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _initializeApp() async {
-    // Simulate loading delay.
     await Future.delayed(const Duration(seconds: 3));
 
-    final user = FirebaseAuth.instance.currentUser;
-
-    if (user != null) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainMenu()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginRegisterPage()),
-      );
-    }
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => const AuthGate()),
+    );
   }
 
   @override
@@ -64,7 +52,6 @@ class _SplashScreenState extends State<SplashScreen>
           child: Stack(
             alignment: Alignment.center,
             children: [
-              // Circular progress indicator spinning
               SizedBox(
                 width: logoSize,
                 height: logoSize,
@@ -75,10 +62,9 @@ class _SplashScreenState extends State<SplashScreen>
                 ),
               ),
 
-              // Logo in the center
               Image.asset(
                 'assets/images/StudyForgeLogo.png',
-                width: logoSize * 0.8, // slightly smaller than indicator
+                width: logoSize * 0.8,
                 height: logoSize * 0.8,
               ),
             ],

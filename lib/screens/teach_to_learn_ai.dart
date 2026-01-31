@@ -33,19 +33,39 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
           style: TextStyle(color: Colors.white),
         ),
       ),
-      body: DashChat(
-        currentUser: _currentUser,
-        typingUsers: _typingUser,
-        messageOptions: const MessageOptions(
-          currentUserContainerColor: Colors.black,
-          containerColor: Color.fromRGBO(0, 166, 126, 1),
-          textColor: Colors.white,
-        ),
-        onSend: (ChatMessage m) {
-          getChatResponse(m);
-        },
-        messages: _messages,
-      ),
+
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            color: Colors.amber.shade200,
+            child: const Text(
+              "⚠️ Gemini can make mistakes. Always verify important information.",
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+            ),
+          ),
+          Expanded(
+            child: DashChat(
+              currentUser: _currentUser,
+              typingUsers: _typingUser,
+              messageOptions: const MessageOptions(
+                currentUserContainerColor: Colors.black,
+                containerColor: Color.fromRGBO(0, 166, 126, 1),
+                textColor: Colors.white,
+              ),
+              onSend: (ChatMessage m) {
+                getChatResponse(m);
+              },
+              messages: _messages,
+            ),
+          ),
+        ],
+      )
     );
   }
 
