@@ -2,6 +2,7 @@ import 'package:StudyForgeProject/screens/teach_to_learn_ai.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'message_page.dart';
+import 'new_flashcard_menu.dart';
 import 'settings.dart';
 import 'profile_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -26,7 +27,29 @@ class MainMenu extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.blueGrey,
 
-        title: const SizedBox.shrink(),
+        title: SizedBox(
+          height: 40,
+          // TODO: Make Search Bar Functional.
+          // Search Bar for users/flashcard sets.
+          child: TextField(
+            textInputAction: TextInputAction.search,
+            decoration: InputDecoration(
+              hintText: "Search...",
+              filled: true,
+              fillColor: Color(0xFFDCE6F0),
+              contentPadding:
+              const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              prefixIcon: const Icon(Icons.search, size: 20),
+            ),
+            onSubmitted: (value) {
+              debugPrint("Search submitted: $value");
+            },
+          ),
+        ),
 
         // ☰ DROPDOWN MENU WITH ICONS
         actions: [
@@ -171,8 +194,14 @@ class MainMenu extends StatelessWidget {
                             padding: const EdgeInsets.symmetric(vertical: 18),
                             textStyle: const TextStyle(fontSize: 16),
                           ),
-                          onPressed: () =>
-                              navigateTo(context, "Create Flashcards pressed"),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => const NewFlashcardMenu(),
+                              ),
+                            );
+                          },
                           child: const Text("Create Flashcards"),
                         ),
                         const SizedBox(height: 16),
