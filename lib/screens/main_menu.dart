@@ -1,12 +1,10 @@
 import 'package:StudyForgeProject/screens/teach_to_learn_ai.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'message_page.dart';
-import 'new_flashcard_menu.dart';
 import 'settings.dart';
 import 'profile_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MainMenu extends StatelessWidget {
   const MainMenu({super.key});
@@ -23,20 +21,18 @@ class MainMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFDCE6F0),
+      resizeToAvoidBottomInset: true, // important for keyboard
+      backgroundColor: const Color(0xFFDCE6F0),
       appBar: AppBar(
         backgroundColor: Colors.blueGrey,
-
         title: SizedBox(
-          height: 40,
-          // TODO: Make Search Bar Functional.
-          // Search Bar for users/flashcard sets.
+          height: 36,
           child: TextField(
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               hintText: "Search...",
               filled: true,
-              fillColor: Color(0xFFDCE6F0),
+              fillColor: Colors.white,
               contentPadding:
               const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
               border: OutlineInputBorder(
@@ -50,12 +46,10 @@ class MainMenu extends StatelessWidget {
             },
           ),
         ),
-
-        // ☰ DROPDOWN MENU WITH ICONS
         actions: [
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, color: Colors.white),
-            onSelected: (value) {
+            onSelected: (value) async {
               if (value == 'profile') {
                 Navigator.push(
                   context,
@@ -84,7 +78,7 @@ class MainMenu extends StatelessWidget {
                       TextButton(
                         onPressed: () async {
                           await FirebaseAuth.instance.signOut();
-                          Navigator.pop(context); // close the dialog
+                          Navigator.pop(context);
                         },
                         child: const Text("Logout"),
                       ),
@@ -93,7 +87,6 @@ class MainMenu extends StatelessWidget {
                 );
               }
             },
-
             itemBuilder: (context) => const [
               PopupMenuItem(
                 value: 'profile',
@@ -130,94 +123,86 @@ class MainMenu extends StatelessWidget {
         ],
       ),
 
-      body: Center(
+      body: SingleChildScrollView(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Expanded(
-                child: StreamBuilder<DocumentSnapshot>(
-                  stream: FirebaseFirestore.instance
-                      .collection('users')
-                      .doc(FirebaseAuth.instance.currentUser!.uid)
-                      .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+              // Main user info and buttons
+              StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(FirebaseAuth.instance.currentUser!.uid)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                    if (!snapshot.hasData || !snapshot.data!.exists) {
-                      return const Center(child: Text("Welcome!"));
-                    }
+                  if (!snapshot.hasData || !snapshot.data!.exists) {
+                    return const Center(child: Text("Welcome!"));
+                  }
 
-                    final data = snapshot.data!.data() as Map<String, dynamic>;
-                    final username = data['username'] ?? "User";
+                  final data = snapshot.data!.data() as Map<String, dynamic>;
+                  final username = data['username'] ?? "User";
 
-                    return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(
-                          "Welcome, $username",
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold),
+                  return Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 48),
+                      Text(
+                        "Welcome, $username",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
                         ),
-                        const SizedBox(height: 32),
-                        Image.asset(
-                          'assets/images/StudyForgeLogo.png',
-                          height: 160,
+                      ),
+                      const SizedBox(height: 32),
+                      Image.asset(
+                        'assets/images/StudyForgeLogo.png',
+                        height: 200,
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          textStyle: const TextStyle(fontSize: 18),
                         ),
-                        const SizedBox(height: 32),
-
-                        // BUTTONS
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            textStyle: const TextStyle(fontSize: 16),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const TeachToLearnAi(),
-                              ),
-                            );
-                          },
-                          child: const Text("Start a lesson with AI"),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const TeachToLearnAi(),
+                            ),
+                          );
+                        },
+                        child: const Text("Start a lesson with AI"),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          textStyle: const TextStyle(fontSize: 18),
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            textStyle: const TextStyle(fontSize: 16),
-                          ),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => const NewFlashcardMenu(),
-                              ),
-                            );
-                          },
-                          child: const Text("Create Flashcards"),
+                        onPressed: () =>
+                            navigateTo(context, "Create Flashcards pressed"),
+                        child: const Text("Create Flashcards"),
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
+                          textStyle: const TextStyle(fontSize: 18),
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 18),
-                            textStyle: const TextStyle(fontSize: 16),
-                          ),
-                          onPressed: () =>
-                              navigateTo(context, "View Flashcards pressed"),
-                          child: const Text("View Flashcards"),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+                        onPressed: () =>
+                            navigateTo(context, "View Flashcards pressed"),
+                        child: const Text("View Flashcards"),
+                      ),
+                    ],
+                  );
+                },
               ),
             ],
           ),
