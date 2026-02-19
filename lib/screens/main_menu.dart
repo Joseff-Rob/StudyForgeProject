@@ -1,10 +1,11 @@
-import 'package:StudyForgeProject/screens/teach_to_learn_ai.dart';
 import 'package:flutter/material.dart';
-import 'message_page.dart';
-import 'settings.dart';
-import 'profile_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+
+import 'teach_to_learn_ai.dart';
+import 'flashcard_page.dart';
+import 'profile_page.dart';
+import 'settings.dart';
 
 class MainMenu extends StatefulWidget {
   const MainMenu({super.key});
@@ -15,6 +16,7 @@ class MainMenu extends StatefulWidget {
 
 class _MainMenuState extends State<MainMenu> {
   final FocusNode _searchFocusNode = FocusNode();
+  int _selectedIndex = 0;
 
   @override
   void dispose() {
@@ -22,28 +24,147 @@ class _MainMenuState extends State<MainMenu> {
     super.dispose();
   }
 
-  void navigateTo(BuildContext context, String message) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => MessagePage(message: message),
-      ),
-    );
+  void _onItemTapped(int index) {
+    if (index == 0) {
+      // Teach to Learn Menu
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.play_arrow),
+              title: const Text("Start New Lesson (Gemini)"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const TeachToLearnAi(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.history),
+              title: const Text("View Old Lessons"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      );
+    } else if (index == 1) {
+      // Flashcards Menu
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.visibility),
+              title: const Text("View Flashcards"),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const FlashcardsPage(),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.add),
+              title: const Text("Create New Flashcard Set"),
+              onTap: () {
+                Navigator.pop(context);
+              },
+            ),
+          ],
+        ),
+      );
+    } else {
+      // Placeholder Buttons
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => const Padding(
+          padding: EdgeInsets.all(24.0),
+          child: Text(
+            "Coming Soon...",
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 18),
+          ),
+        ),
+      );
+    }
+
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _searchFocusNode.unfocus();
-    });
     return Scaffold(
-      resizeToAvoidBottomInset: true, // important for keyboard
+      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFDCE6F0),
+
+      endDrawer: SizedBox(
+        width: MediaQuery.of(context).size.width * 0.75,
+        child: Drawer(
+          child: SafeArea(
+            child: Column(
+              children: [
+                const ListTile(
+                  title: Text(
+                    "Menu",
+                    style:
+                    TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.person),
+                  title: const Text("View Profile"),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ProfilePage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.settings),
+                  title: const Text("Settings"),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const SettingsPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.logout),
+                  title: const Text("Log Out"),
+                  onTap: () async {
+                    await FirebaseAuth.instance.signOut();
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+
       appBar: AppBar(
         backgroundColor: Colors.blueGrey,
         title: SizedBox(
           height: 36,
           child: TextField(
+            focusNode: _searchFocusNode,
             textInputAction: TextInputAction.search,
             decoration: InputDecoration(
               hintText: "Search...",
@@ -63,166 +184,80 @@ class _MainMenuState extends State<MainMenu> {
           ),
         ),
         actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onSelected: (value) async {
-              if (value == 'profile') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ProfilePage(),
-                  ),
-                );
-              } else if (value == 'settings') {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsPage(),
-                  ),
-                );
-              } else if (value == 'logout') {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text("Logout"),
-                    content: const Text("Are you sure you want to log out?"),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text("Cancel"),
-                      ),
-                      TextButton(
-                        onPressed: () async {
-                          await FirebaseAuth.instance.signOut();
-                          Navigator.pop(context);
-                        },
-                        child: const Text("Logout"),
-                      ),
-                    ],
-                  ),
-                );
-              }
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(
-                value: 'profile',
-                child: Row(
-                  children: [
-                    Icon(Icons.person),
-                    SizedBox(width: 10),
-                    Text('View Profile'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings),
-                    SizedBox(width: 10),
-                    Text('Settings'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 10),
-                    Text('Log Out'),
-                  ],
-                ),
-              ),
-            ],
+          Builder(
+            builder: (context) => IconButton(
+              icon: const Icon(Icons.menu),
+              onPressed: () {
+                Scaffold.of(context).openEndDrawer();
+              },
+            ),
           ),
         ],
       ),
 
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            children: [
-              // Main user info and buttons
-              StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('users')
-                    .doc(FirebaseAuth.instance.currentUser!.uid)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('users')
+            .doc(FirebaseAuth.instance.currentUser!.uid)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-                  if (!snapshot.hasData || !snapshot.data!.exists) {
-                    return const Center(child: Text("Welcome!"));
-                  }
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(child: Text("Welcome!"));
+          }
 
-                  final data = snapshot.data!.data() as Map<String, dynamic>;
-                  final username = data['username'] ?? "User";
+          final data = snapshot.data!.data() as Map<String, dynamic>;
+          final username = data['username'] ?? "User";
 
-                  return Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      const SizedBox(height: 48),
-                      Text(
-                        "Welcome, $username",
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                      Image.asset(
-                        'assets/images/StudyForgeLogo.png',
-                        height: 200,
-                      ),
-                      const SizedBox(height: 32),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          textStyle: const TextStyle(fontSize: 18),
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const TeachToLearnAi(),
-                            ),
-                          );
-                        },
-                        child: const Text("Start a lesson with AI"),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          textStyle: const TextStyle(fontSize: 18),
-                        ),
-                        onPressed: () =>
-                            navigateTo(context, "Create Flashcards pressed"),
-                        child: const Text("Create Flashcards"),
-                      ),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 24),
-                          textStyle: const TextStyle(fontSize: 18),
-                        ),
-                        onPressed: () =>
-                            navigateTo(context, "View Flashcards pressed"),
-                        child: const Text("View Flashcards"),
-                      ),
-                    ],
-                  );
-                },
-              ),
-            ],
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  "Welcome, $username 👋",
+                  style: const TextStyle(
+                      fontSize: 26, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 30),
+                Image.asset(
+                  'assets/images/StudyForgeLogo.png',
+                  height: 180,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+
+      bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
+        currentIndex: _selectedIndex,
+        onTap: _onItemTapped,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.school),
+            label: "Teach",
           ),
-        ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.style),
+            label: "Flashcards",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_circle_outline),
+            label: "Coming",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.bar_chart),
+            label: "Coming",
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline),
+            label: "Coming",
+          ),
+        ],
       ),
     );
   }
