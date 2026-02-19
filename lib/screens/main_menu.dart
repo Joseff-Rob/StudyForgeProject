@@ -145,14 +145,41 @@ class _MainMenuState extends State<MainMenu> {
                     );
                   },
                 ),
+
+                const Spacer(),
+
                 ListTile(
                   leading: const Icon(Icons.logout),
                   title: const Text("Log Out"),
                   onTap: () async {
-                    await FirebaseAuth.instance.signOut();
+                    // Close drawer first
                     Navigator.pop(context);
+
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Logout"),
+                        content: const Text("Are you sure you want to log out?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Cancel"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text("Logout"),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm ?? false) {
+                      await FirebaseAuth.instance.signOut();
+                      // Optional: navigate to login screen
+                    }
                   },
                 ),
+
               ],
             ),
           ),
