@@ -22,14 +22,12 @@ class _MainMenuState extends State<MainMenu> {
   List<Map<String, dynamic>> _searchResults = [];
 
   int _selectedIndex = 0;
-
   Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
 
-    // Listen for text changes and perform live search
     _searchController.addListener(() {
       _performDebouncedSearch(_searchController.text.trim());
     });
@@ -43,9 +41,6 @@ class _MainMenuState extends State<MainMenu> {
     super.dispose();
   }
 
-  // ------------------------
-  // DEBOUNCE SEARCH
-  // ------------------------
   void _performDebouncedSearch(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
@@ -53,9 +48,6 @@ class _MainMenuState extends State<MainMenu> {
     });
   }
 
-  // ------------------------
-  // SEARCH USERS
-  // ------------------------
   Future<void> _searchUsers(String query) async {
     if (query.isEmpty) {
       setState(() => _searchResults = []);
@@ -69,7 +61,7 @@ class _MainMenuState extends State<MainMenu> {
           .collection('users')
           .where('username_lower', isGreaterThanOrEqualTo: lowerQuery)
           .where('username_lower', isLessThanOrEqualTo: lowerQuery + '\uf8ff')
-          .limit(10)
+          .limit(3)
           .get();
 
       final results = snapshot.docs
@@ -85,12 +77,8 @@ class _MainMenuState extends State<MainMenu> {
     }
   }
 
-  // ------------------------
-  // BOTTOM NAVIGATION
-  // ------------------------
   void _onItemTapped(int index) {
     if (index == 0) {
-      // Teach to Learn Menu
       showModalBottomSheet(
         context: context,
         builder: (_) => Wrap(
@@ -105,16 +93,10 @@ class _MainMenuState extends State<MainMenu> {
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.history),
-              title: const Text("View Old Lessons"),
-              onTap: () => Navigator.pop(context),
-            ),
           ],
         ),
       );
     } else if (index == 1) {
-      // Flashcards Menu
       showModalBottomSheet(
         context: context,
         builder: (_) => Wrap(
@@ -129,25 +111,7 @@ class _MainMenuState extends State<MainMenu> {
                 );
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.add),
-              title: const Text("Create New Flashcard Set"),
-              onTap: () => Navigator.pop(context),
-            ),
           ],
-        ),
-      );
-    } else {
-      // Placeholder buttons
-      showModalBottomSheet(
-        context: context,
-        builder: (_) => const Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Text(
-            "Coming Soon...",
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 18),
-          ),
         ),
       );
     }
@@ -157,18 +121,13 @@ class _MainMenuState extends State<MainMenu> {
     });
   }
 
-  // ------------------------
-  // BUILD
-  // ------------------------
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
-      resizeToAvoidBottomInset: true,
       backgroundColor: const Color(0xFFDCE6F0),
 
-      // Right-side drawer
       endDrawer: SizedBox(
         width: MediaQuery.of(context).size.width * 0.75,
         child: Drawer(
@@ -177,11 +136,11 @@ class _MainMenuState extends State<MainMenu> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(
-                      vertical: 24, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 24),
                   color: Colors.blueGrey,
                   child: const Text(
                     "Menu",
+                    textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
@@ -189,7 +148,6 @@ class _MainMenuState extends State<MainMenu> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 16),
                 ListTile(
                   leading: const Icon(Icons.person),
                   title: const Text("View Profile"),
@@ -199,8 +157,9 @@ class _MainMenuState extends State<MainMenu> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                            builder: (_) =>
-                                ProfilePage(userId: currentUser.uid)),
+                          builder: (_) =>
+                              ProfilePage(userId: currentUser.uid),
+                        ),
                       );
                     }
                   },
@@ -212,38 +171,22 @@ class _MainMenuState extends State<MainMenu> {
                     Navigator.pop(context);
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SettingsPage()),
+                      MaterialPageRoute(
+                          builder: (_) => const SettingsPage()),
                     );
                   },
                 ),
                 const Spacer(),
                 ListTile(
-                  leading: const Icon(Icons.logout, color: Colors.red),
-                  title: const Text("Log Out",
-                      style: TextStyle(color: Colors.red)),
+                  leading:
+                  const Icon(Icons.logout, color: Colors.red),
+                  title: const Text(
+                    "Log Out",
+                    style: TextStyle(color: Colors.red),
+                  ),
                   onTap: () async {
-                    Navigator.pop(context); // close drawer
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text("Logout"),
-                        content: const Text(
-                            "Are you sure you want to log out?"),
-                        actions: [
-                          TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(context, false),
-                              child: const Text("Cancel")),
-                          TextButton(
-                              onPressed: () =>
-                                  Navigator.pop(context, true),
-                              child: const Text("Logout")),
-                        ],
-                      ),
-                    );
-                    if (confirm ?? false) {
-                      await FirebaseAuth.instance.signOut();
-                    }
+                    Navigator.pop(context);
+                    await FirebaseAuth.instance.signOut();
                   },
                 ),
                 const SizedBox(height: 16),
@@ -253,68 +196,23 @@ class _MainMenuState extends State<MainMenu> {
         ),
       ),
 
-      // AppBar with Search
       appBar: AppBar(
         backgroundColor: Colors.blueGrey,
-        title: Column(
-          children: [
-            TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              textInputAction: TextInputAction.search,
-              decoration: InputDecoration(
-                hintText: "Search users...",
-                filled: true,
-                fillColor: Colors.white,
-                contentPadding:
-                const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide.none,
-                ),
-                prefixIcon: const Icon(Icons.search, size: 20),
-              ),
+        title: TextField(
+          controller: _searchController,
+          focusNode: _searchFocusNode,
+          decoration: InputDecoration(
+            hintText: "Search users...",
+            filled: true,
+            fillColor: Colors.white,
+            contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: BorderSide.none,
             ),
-            if (_searchResults.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Colors.black26,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                constraints: const BoxConstraints(maxHeight: 200),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _searchResults.length,
-                  itemBuilder: (context, index) {
-                    final user = _searchResults[index];
-                    return ListTile(
-                      title: Text(user['username']),
-                      onTap: () {
-                        // Open read-only profile for searched user
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProfilePage(userId: user['uid']),
-                          ),
-                        );
-                        setState(() {
-                          _searchResults = [];
-                          _searchController.clear();
-                        });
-                      },
-                    );
-                  },
-                ),
-              ),
-          ],
+            prefixIcon: const Icon(Icons.search),
+          ),
         ),
         actions: [
           Builder(
@@ -328,70 +226,124 @@ class _MainMenuState extends State<MainMenu> {
         ],
       ),
 
-      body: StreamBuilder<DocumentSnapshot>(
-        stream: currentUser != null
-            ? FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUser.uid)
-            .snapshots()
-            : null,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+      body: Stack(
+        children: [
+          // Main Content
+          StreamBuilder<DocumentSnapshot>(
+            stream: currentUser != null
+                ? FirebaseFirestore.instance
+                .collection('users')
+                .doc(currentUser.uid)
+                .snapshots()
+                : null,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(
+                    child: CircularProgressIndicator());
+              }
 
-          if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(child: Text("Welcome!"));
-          }
+              final data =
+              snapshot.data!.data() as Map<String, dynamic>;
+              final username = data['username'] ?? "User";
 
-          final data = snapshot.data!.data() as Map<String, dynamic>;
-          final username = data['username'] ?? "User";
-
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text(
-                  "Welcome, $username 👋",
-                  style: const TextStyle(
-                      fontSize: 26, fontWeight: FontWeight.bold),
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "Welcome, $username 👋",
+                      style: const TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 30),
+                    Image.asset(
+                      'assets/images/StudyForgeLogo.png',
+                      height: 180,
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 30),
-                Image.asset(
-                  'assets/images/StudyForgeLogo.png',
-                  height: 180,
+              );
+            },
+          ),
+
+          if (_searchResults.isNotEmpty)
+            Positioned(
+              top: 10, left: 16, right: 16,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Material(
+                  elevation: 8,
+                  borderRadius: BorderRadius.circular(16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      color: Colors.white,
+                      constraints: const BoxConstraints(maxHeight: 300),
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        itemCount: _searchResults.length,
+                        itemBuilder: (context, index) {
+                          final user = _searchResults[index];
+
+                          return Material(
+                            color: Colors.white,
+                            child: InkWell(
+                              hoverColor: Colors.grey.shade200,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        ProfilePage(userId: user['uid']),
+                                  ),
+                                );
+
+                                setState(() {
+                                  _searchResults = [];
+                                  _searchController.clear();
+                                  _searchFocusNode.unfocus();
+                                });
+                              },
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 14,
+                                ),
+                                child: Text(
+                                  user['username'],
+                                  style: const TextStyle(fontSize: 16),
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
-              ],
+              ),
             ),
-          );
-        },
+        ],
       ),
 
       bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
+        type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.school),
-            label: "Teach",
-          ),
+              icon: Icon(Icons.school), label: "Teach"),
           BottomNavigationBarItem(
-            icon: Icon(Icons.style),
-            label: "Flashcards",
-          ),
+              icon: Icon(Icons.style), label: "Flashcards"),
           BottomNavigationBarItem(
-            icon: Icon(Icons.add_circle_outline),
-            label: "Coming",
-          ),
+              icon: Icon(Icons.add_circle_outline),
+              label: "Coming"),
           BottomNavigationBarItem(
-            icon: Icon(Icons.bar_chart),
-            label: "Coming",
-          ),
+              icon: Icon(Icons.bar_chart), label: "Coming"),
           BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            label: "Coming",
-          ),
+              icon: Icon(Icons.person_outline),
+              label: "Coming"),
         ],
       ),
     );
