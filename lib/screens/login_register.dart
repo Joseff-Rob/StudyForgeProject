@@ -143,15 +143,15 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       // Update displayName in FirebaseAuth
                       await user.updateDisplayName(username);
 
-                      // Save in Firestore
+                      // Save in Firestore with lowercase username for search
                       AppUser newUser = AppUser(
                         uid: user.uid,
                         email: user.email!,
                         username: username,
+                        usernameLower: username.toLowerCase(),
                       );
                       await userService.createUser(newUser);
                     }
-
 
                   } on FirebaseAuthException catch (e) {
                     setState(() {
@@ -173,8 +173,8 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                     ? const SizedBox(
                   height: 20,
                   width: 20,
-                  child:
-                  CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                  child: CircularProgressIndicator(
+                      color: Colors.white, strokeWidth: 2),
                 )
                     : Text(isLogin ? "Login" : "Register"),
               ),

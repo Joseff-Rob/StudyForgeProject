@@ -3,7 +3,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatelessWidget {
-  const ProfilePage({super.key});
+  final String? userId; // If null → current user; otherwise → view another user
+
+  const ProfilePage({super.key, this.userId});
 
   // ----------------------------
   // EDIT USERNAME
@@ -31,11 +33,9 @@ class ProfilePage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               final newUsername = controller.text.trim();
-
               if (newUsername.isEmpty) return;
 
               final taken = await isUsernameTaken(newUsername, uid);
-
               if (taken) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Username already taken")),
@@ -63,10 +63,8 @@ class ProfilePage extends StatelessWidget {
         .where('username', isEqualTo: username)
         .get();
 
-    // If any document exists that is NOT the current user
     return query.docs.any((doc) => doc.id != currentUid);
   }
-
 
   // ----------------------------
   // EDIT EMAIL
@@ -128,32 +126,34 @@ class ProfilePage extends StatelessWidget {
         .where('email', isEqualTo: email)
         .get();
 
-    // If any document exists that is NOT the current user
     return query.docs.any((doc) => doc.id != currentUid);
   }
-
 
   // ----------------------------
   // UI
   // ----------------------------
   @override
   Widget build(BuildContext context) {
-    final User? user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    final uidToShow = userId ?? currentUser?.uid;
+
+    if (uidToShow == null) {
       return const Scaffold(
-        body: Center(child: Text("No user logged in")),
+        body: Center(child: Text("No user to display")),
       );
     }
 
-    final uid = user.uid;
+    final isCurrentUser = uidToShow == currentUser?.uid;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Profile")),
+      appBar: AppBar(
+        title: Text(isCurrentUser ? "Your Profile" : "User Profile"),
+      ),
       body: Center(
         child: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
               .collection('users')
-              .doc(uid)
+              .doc(uidToShow)
               .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
@@ -184,11 +184,14 @@ class ProfilePage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(username, style: const TextStyle(fontSize: 20)),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _editUsername(context, uid, username),
-                    ),
+                    if (isCurrentUser)
+                      const SizedBox(width: 8),
+                    if (isCurrentUser)
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () =>
+                            _editUsername(context, uidToShow, username),
+                      ),
                   ],
                 ),
 
@@ -204,11 +207,12 @@ class ProfilePage extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(email, style: const TextStyle(fontSize: 16)),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(Icons.edit),
-                      onPressed: () => _editEmail(context, uid, email),
-                    ),
+                    if (isCurrentUser) const SizedBox(width: 8),
+                    if (isCurrentUser)
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => _editEmail(context, uidToShow, email),
+                      ),
                   ],
                 ),
               ],
