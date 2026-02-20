@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:StudyForgeProject/screens/create_flashcard_set_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -81,38 +82,105 @@ class _MainMenuState extends State<MainMenu> {
     if (index == 0) {
       showModalBottomSheet(
         context: context,
-        builder: (_) => Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.play_arrow),
-              title: const Text("Start New Lesson (Gemini)"),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const TeachToLearnAi()),
-                );
-              },
+        isScrollControlled: true,
+        builder: (context) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 70), // height of bottom nav
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.add),
+                  title: const Text("New Lesson With Gemini"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TeachToLearnAi(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.history),
+                  title: const Text("View old Gemini Lessons"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                        const TeachToLearnAi(),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       );
     } else if (index == 1) {
       showModalBottomSheet(
         context: context,
-        builder: (_) => Wrap(
-          children: [
-            ListTile(
-              leading: const Icon(Icons.visibility),
-              title: const Text("View Flashcards"),
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const FlashcardsPage()),
-                );
-              },
+        isScrollControlled: true,
+        builder: (context) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 70), // height of bottom nav
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.visibility),
+                  title: const Text("View Flashcards"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const FlashcardsPage(),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.add),
+                  title: const Text("Add a New Flashcard Set"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                        const CreateFlashcardSetScreen(),
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
+      );
+    } else {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 70), // height of bottom nav
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.question_mark),
+                  title: const Text("Coming soon"),
+                  onTap: () {
+                    Navigator.pop(context);
+                  },
+                ),
+              ],
+            ),
+          );
+        },
       );
     }
 
@@ -176,6 +244,7 @@ class _MainMenuState extends State<MainMenu> {
                     );
                   },
                 ),
+                // Place Logout button to bottom of menu.
                 const Spacer(),
                 ListTile(
                   leading:
