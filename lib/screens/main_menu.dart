@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:StudyForgeProject/screens/create_flashcard_set_screen.dart';
+import 'package:StudyForgeProject/screens/user_flashcards_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'profile_page.dart';
 import 'teach_to_learn_ai.dart';
-import 'flashcard_page.dart';
 import 'settings.dart';
 
 class MainMenu extends StatefulWidget {
@@ -137,7 +137,7 @@ class _MainMenuState extends State<MainMenu> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const FlashcardsPage(),
+                        builder: (_) => const UserFlashcardSetsScreen(),
                       ),
                     );
                   },

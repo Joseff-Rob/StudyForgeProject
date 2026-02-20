@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/firestore_flashcard_service.dart';
+import 'add_flashcard_screen.dart';
+import 'add_flashcard_screen.dart';
 
 class CreateFlashcardSetScreen extends StatefulWidget {
   const CreateFlashcardSetScreen({super.key});
@@ -17,8 +19,11 @@ class _CreateFlashcardSetScreenState
   bool _isPublic = false;
   bool _isLoading = false;
 
+  /// Create a flashcard set and navigate to AddFlashcardsScreen
   Future<void> _createSet() async {
-    if (_titleController.text.trim().isEmpty) {
+    final title = _titleController.text.trim();
+
+    if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter a title")),
       );
@@ -28,23 +33,37 @@ class _CreateFlashcardSetScreenState
     setState(() => _isLoading = true);
 
     try {
+      // Create the flashcard set in Firestore
       final setId = await _flashcardService.createFlashcardSet(
-        title: _titleController.text.trim(),
+        title: title,
         isPublic: _isPublic,
       );
 
       if (!mounted) return;
 
-      Navigator.pop(context, setId);
-      // Later you can navigate to AddFlashcardsScreen(setId: setId)
-
+      // Navigate immediately to AddFlashcardsScreen
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => AddFlashcardScreen(
+            setId: setId,
+            setTitle: title,
+          ),
+        ),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
+        SnackBar(content: Text("Error creating set: $e")),
       );
     }
 
     setState(() => _isLoading = false);
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    super.dispose();
   }
 
   @override
@@ -73,7 +92,6 @@ class _CreateFlashcardSetScreenState
               ),
             ),
             const SizedBox(height: 20),
-
             SwitchListTile(
               value: _isPublic,
               onChanged: (value) {
@@ -81,9 +99,7 @@ class _CreateFlashcardSetScreenState
               },
               title: const Text("Make Public"),
             ),
-
             const Spacer(),
-
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
