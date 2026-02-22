@@ -1,3 +1,4 @@
+import 'package:StudyForgeProject/screens/public_user_flashcard_sets_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -214,6 +215,20 @@ class ProfilePage extends StatelessWidget {
                         onPressed: () => _editEmail(context, uidToShow, email),
                       ),
                   ],
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => PublicUserFlashcardSetsScreen(
+                          userId: uidToShow,
+                          username: username,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text("View Flashcards"),
                 ),
               ],
             );

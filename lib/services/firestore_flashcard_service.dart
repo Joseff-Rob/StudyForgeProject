@@ -88,4 +88,28 @@ class FlashcardService {
       }).toList();
     });
   }
+
+  Stream<List<Map<String, dynamic>>> streamFlashcardSetsForProfile(String viewedUserId) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return const Stream.empty();
+
+    final isOwner = currentUser.uid == viewedUserId;
+
+    Query query = _firestore
+        .collection('flashcard_sets')
+        .where('ownerId', isEqualTo: viewedUserId)
+        .orderBy('createdAt', descending: true);
+
+    if (!isOwner) {
+      query = query.where('isPublic', isEqualTo: true);
+    }
+
+    return query.snapshots().map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
 }
