@@ -161,4 +161,21 @@ class FlashcardService {
       'flashcardCount': FieldValue.increment(-1),
     });
   }
+
+  Future<void> deleteFlashcardSet(String setId) async {
+    final setRef =
+    _firestore.collection('flashcard_sets').doc(setId);
+
+    // Get all flashcards inside set
+    final cardsSnapshot =
+    await setRef.collection('flashcards').get();
+
+    // Delete flashcards first
+    for (var doc in cardsSnapshot.docs) {
+      await doc.reference.delete();
+    }
+
+    // Then delete the set itself
+    await setRef.delete();
+  }
 }

@@ -22,13 +22,17 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
 
   bool _isAdding = false;
 
+  // --------------------------
+  // ADD FLASHCARD
+  // --------------------------
+
   Future<void> _addFlashcard() async {
     final question = _questionController.text.trim();
     final answer = _answerController.text.trim();
 
     if (question.isEmpty || answer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter both question and answer")),
+        const SnackBar(content: Text("Please enter question + answer")),
       );
       return;
     }
@@ -53,6 +57,83 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
     setState(() => _isAdding = false);
   }
 
+  // --------------------------
+  // EDIT FLASHCARD
+  // --------------------------
+
+  void _showEditFlashcardDialog(Map<String, dynamic> card) {
+    final questionController =
+    TextEditingController(text: card['question']);
+    final answerController =
+    TextEditingController(text: card['answer']);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text("Edit Flashcard"),
+
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: questionController,
+                  decoration:
+                  const InputDecoration(labelText: "Question"),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: answerController,
+                  decoration:
+                  const InputDecoration(labelText: "Answer"),
+                ),
+              ],
+            ),
+          ),
+
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancel"),
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                await _flashcardService.updateFlashcard(
+                  setId: widget.setId,
+                  flashcardId: card['id'],
+                  question: questionController.text.trim(),
+                  answer: answerController.text.trim(),
+                );
+
+                Navigator.pop(context);
+              },
+              child: const Text("Save"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // --------------------------
+  // DELETE FLASHCARD
+  // --------------------------
+
+  Future<void> _deleteFlashcard(String id) async {
+    try {
+      await _flashcardService.deleteFlashcard(
+        setId: widget.setId,
+        flashcardId: id,
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Delete failed: $e")),
+      );
+    }
+  }
+
   @override
   void dispose() {
     _questionController.dispose();
@@ -60,17 +141,22 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
     super.dispose();
   }
 
+  // --------------------------
+  // UI
+  // --------------------------
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text("Add Flashcards: ${widget.setTitle}"),
       ),
+
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Question input
+
             TextField(
               controller: _questionController,
               decoration: const InputDecoration(
@@ -78,9 +164,9 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 12),
 
-            // Answer input
             TextField(
               controller: _answerController,
               decoration: const InputDecoration(
@@ -88,54 +174,80 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
                 border: OutlineInputBorder(),
               ),
             ),
+
             const SizedBox(height: 12),
 
-            // Add flashcard button
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _isAdding ? null : _addFlashcard,
                 child: _isAdding
-                    ? const CircularProgressIndicator(color: Colors.white)
+                    ? const CircularProgressIndicator(
+                  color: Colors.white,
+                )
                     : const Text("Add Flashcard"),
               ),
             ),
 
             const SizedBox(height: 12),
 
-            // Submit button: goes back to MainMenu
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () {
-                  Navigator.popUntil(context, (route) => route.isFirst);
+                  Navigator.popUntil(
+                      context, (route) => route.isFirst);
                 },
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                ),
-                child: const Text(
-                  "Submit Set",
-                  style: TextStyle(fontSize: 16),
-                ),
+                child: const Text("Submit Set"),
               ),
             ),
 
             const SizedBox(height: 20),
 
-            // List of current flashcards
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: _flashcardService.streamFlashcards(widget.setId),
+                stream:
+                _flashcardService.streamFlashcards(widget.setId),
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) return const SizedBox();
+
+                  if (!snapshot.hasData) {
+                    return const Center(
+                        child: CircularProgressIndicator());
+                  }
+
                   final flashcards = snapshot.data!;
+
                   return ListView.builder(
                     itemCount: flashcards.length,
                     itemBuilder: (context, index) {
                       final card = flashcards[index];
-                      return ListTile(
-                        title: Text(card['question']),
-                        subtitle: Text(card['answer']),
+
+                      return Card(
+                        child: ListTile(
+                          title: Text(card['question']),
+                          subtitle: Text(card['answer']),
+
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+
+                              IconButton(
+                                icon: const Icon(Icons.edit),
+                                onPressed: () =>
+                                    _showEditFlashcardDialog(card),
+                              ),
+
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete,
+                                  color: Colors.red,
+                                ),
+                                onPressed: () =>
+                                    _deleteFlashcard(card['id']),
+                              ),
+                            ],
+                          ),
+                        ),
                       );
                     },
                   );

@@ -32,7 +32,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
   bool _isOwner = false;
 
-  // -------------------------
+
 
   @override
   void initState() {
@@ -76,10 +76,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     super.dispose();
   }
 
-  // -------------------------
-  // EDIT SET TITLE
-  // -------------------------
-
+  // Edit flashcard set title.
   void _showEditSetDialog(String currentTitle) {
     if (!_isOwner) return;
 
@@ -148,9 +145,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
   }
 
-  // -------------------------
-  // EDIT FLASHCARD
-  // -------------------------
+  // Edit 1 flashcard
 
   void _showEditFlashcardDialog(Map<String, dynamic> card) {
     if (!_isOwner) return;
@@ -233,6 +228,136 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
   }
 
+  // Delete flashcard
+  void _deleteFlashcard(String flashcardId) async {
+    if (!_isOwner) return;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Flashcard"),
+        content: const Text("Are you sure you want to delete this flashcard?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              "Delete",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    await _flashcardService.deleteFlashcard(
+      setId: widget.setId,
+      flashcardId: flashcardId,
+    );
+  }
+
+  // Add new flashcard
+  void _showAddFlashcardDialog() {
+    if (!_isOwner) return;
+
+    final questionController = TextEditingController();
+    final answerController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+            left: 20,
+            right: 20,
+          ),
+          child: Center(
+            child: Material(
+              borderRadius: BorderRadius.circular(16),
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                width: MediaQuery.of(context).size.width * 0.9,
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+
+                      const Text(
+                        "Add New Flashcard",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      TextField(
+                        controller: questionController,
+                        maxLines: 2,
+                        decoration: const InputDecoration(
+                          labelText: "Question",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 15),
+
+                      TextField(
+                        controller: answerController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: "Answer",
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+
+                      const SizedBox(height: 25),
+
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: const Text("Cancel"),
+                          ),
+
+                          ElevatedButton(
+                            onPressed: () async {
+                              if (questionController.text.trim().isEmpty ||
+                                  answerController.text.trim().isEmpty) {
+                                return;
+                              }
+
+                              await _flashcardService.addFlashcard(
+                                setId: widget.setId,
+                                question: questionController.text.trim(),
+                                answer: answerController.text.trim(),
+                              );
+
+                              Navigator.pop(context);
+                            },
+                            child: const Text("Add"),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   // -------------------------
   // CARD CONTROLS
   // -------------------------
@@ -269,8 +394,6 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
           (_currentIndex - 1 + _cards.length) % _cards.length;
     });
   }
-
-  // -------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -321,11 +444,16 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
             actions: [
               if (_isOwner)
                 IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: "Add Flashcard",
+                  onPressed: _showAddFlashcardDialog,
+                ),
+              if (_isOwner)
+                IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: () =>
                       _showEditSetDialog(liveTitle),
                 ),
-
               if (_isOwner)
                 IconButton(
                   icon: const Icon(Icons.edit_note),
@@ -344,6 +472,55 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
                   GestureDetector(
                     onTap: _flipCard,
+                    onLongPress: () {
+                      if (!_isOwner) return;
+
+                      final card = _cards[_currentIndex];
+
+                      showModalBottomSheet(
+                        context: context,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        builder: (context) => SafeArea(
+                          child: Wrap(
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.edit),
+                                title: const Text("Edit Flashcard"),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _showEditFlashcardDialog(card);
+                                },
+                              ),
+
+                              ListTile(
+                                leading: const Icon(Icons.add),
+                                title: const Text(
+                                  "Add Flashcard",
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _showAddFlashcardDialog();
+                                },
+                              ),
+
+                              ListTile(
+                                leading: const Icon(Icons.delete, color: Colors.red),
+                                title: const Text(
+                                  "Delete Flashcard",
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                                onTap: () {
+                                  Navigator.pop(context);
+                                  _deleteFlashcard(card['id']);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                     child: AnimatedBuilder(
                       animation: _controller,
                       builder: (context, child) {
