@@ -161,6 +161,33 @@ class _MainMenuState extends State<MainMenu> {
           );
         },
       );
+    } else if (index == 4) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 70), // height of bottom nav
+            child: Wrap(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.visibility),
+                  title: const Text("View Profile"),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const ProfilePage(),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          );
+        },
+      );
     } else {
       showModalBottomSheet(
         context: context,
@@ -412,7 +439,7 @@ class _MainMenuState extends State<MainMenu> {
               icon: Icon(Icons.bar_chart), label: "Coming"),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
-              label: "Coming"),
+              label: "Profile"),
         ],
       ),
     );
