@@ -112,4 +112,53 @@ class FlashcardService {
       }).toList();
     });
   }
+
+  Future<void> updateFlashcardSetTitle(String setId, String newTitle) async {
+    await _firestore.collection('flashcard_sets').doc(setId).update({
+      'title': newTitle,
+    });
+  }
+
+  Future<void> updateFlashcard({
+    required String setId,
+    required String flashcardId,
+    required String question,
+    required String answer,
+  }) async {
+    await _firestore
+        .collection('flashcard_sets')
+        .doc(setId)
+        .collection('flashcards')
+        .doc(flashcardId)
+        .update({
+      'question': question,
+      'answer': answer,
+    });
+  }
+
+  Stream<DocumentSnapshot<Map<String, dynamic>>> streamFlashcardSet(String setId) {
+    return _firestore
+        .collection('flashcard_sets')
+        .doc(setId)
+        .snapshots();
+  }
+
+  Future<void> deleteFlashcard({
+    required String setId,
+    required String flashcardId,
+  }) async {
+    await _firestore
+        .collection('flashcard_sets')
+        .doc(setId)
+        .collection('flashcards')
+        .doc(flashcardId)
+        .delete();
+
+    await _firestore
+        .collection('flashcard_sets')
+        .doc(setId)
+        .update({
+      'flashcardCount': FieldValue.increment(-1),
+    });
+  }
 }
