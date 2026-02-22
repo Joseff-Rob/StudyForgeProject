@@ -9,6 +9,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'profile_page.dart';
 import 'teach_to_learn_ai.dart';
 import 'settings.dart';
+import 'view_flashcards_screen.dart';
 
 class MainMenu extends StatefulWidget {
   const MainMenu({super.key});
@@ -20,7 +21,9 @@ class MainMenu extends StatefulWidget {
 class _MainMenuState extends State<MainMenu> {
   final FocusNode _searchFocusNode = FocusNode();
   final TextEditingController _searchController = TextEditingController();
-  List<Map<String, dynamic>> _searchResults = [];
+
+  List<Map<String, dynamic>> _userResults = [];
+  List<Map<String, dynamic>> _flashcardSetResults = [];
 
   int _selectedIndex = 0;
   Timer? _debounce;
@@ -42,179 +45,240 @@ class _MainMenuState extends State<MainMenu> {
     super.dispose();
   }
 
+  // ---------------- SEARCH ----------------
+
   void _performDebouncedSearch(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      _searchUsers(query);
-    });
+
+    _debounce = Timer(
+      const Duration(milliseconds: 300),
+          () => _search(query),
+    );
   }
 
-  Future<void> _searchUsers(String query) async {
+  Future<void> _search(String query) async {
     if (query.isEmpty) {
-      setState(() => _searchResults = []);
+      setState(() {
+        _userResults = [];
+        _flashcardSetResults = [];
+      });
       return;
     }
 
     final lowerQuery = query.toLowerCase();
 
     try {
-      final snapshot = await FirebaseFirestore.instance
+      // ---------------- USERS SEARCH ----------------
+      final userSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('username_lower', isGreaterThanOrEqualTo: lowerQuery)
-          .where('username_lower', isLessThanOrEqualTo: lowerQuery + '\uf8ff')
-          .limit(3)
+          .where('username_lower',
+          isLessThanOrEqualTo: lowerQuery + '\uf8ff')
+          .limit(5)
           .get();
 
-      final results = snapshot.docs
-          .map((doc) => {
-        'uid': doc.id,
-        'username': doc['username'],
-      })
+      final users = userSnapshot.docs.map((doc) {
+        return {
+          'id': doc.id,
+          'name': doc['username'],
+        };
+      }).toList();
+
+      // ---------------- FLASHCARD SET SEARCH ----------------
+      final setSnapshot = await FirebaseFirestore.instance
+          .collection('flashcard_sets')
+          .where('titleLowercase',
+          isGreaterThanOrEqualTo: lowerQuery)
+          .where('titleLowercase',
+          isLessThanOrEqualTo: lowerQuery + '\uf8ff')
+          .limit(5)
+          .get();
+
+      // Collect owner IDs
+      final ownerIds = setSnapshot.docs
+          .map((doc) => doc['ownerId'] as String)
+          .toSet()
           .toList();
 
-      setState(() => _searchResults = results);
+      // Fetch owner usernames in one batch query
+      Map<String, String> ownerUsernames = {};
+
+      if (ownerIds.isNotEmpty) {
+        final userDocs = await FirebaseFirestore.instance
+            .collection('users')
+            .where(FieldPath.documentId, whereIn: ownerIds)
+            .get();
+
+        for (var doc in userDocs.docs) {
+          ownerUsernames[doc.id] = doc['username'] ?? "Unknown";
+        }
+      }
+
+      // Build final flashcard set results
+      final sets = setSnapshot.docs.map((doc) {
+        return {
+          'id': doc.id,
+          'name': doc['title'],
+          'cards': doc['flashcardCount'] ?? 0,
+          'ownerName':
+          ownerUsernames[doc['ownerId']] ?? "Unknown",
+        };
+      }).toList();
+
+      // ---------------- UPDATE UI ----------------
+      setState(() {
+        _userResults = users;
+        _flashcardSetResults = sets;
+      });
     } catch (e) {
       debugPrint("Search error: $e");
     }
   }
+
+  void _clearSearch() {
+    setState(() {
+      _userResults = [];
+      _flashcardSetResults = [];
+      _searchController.clear();
+      _searchFocusNode.unfocus();
+    });
+  }
+
+  // ---------------- NAVIGATION ----------------
 
   void _onItemTapped(int index) {
     if (index == 0) {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        builder: (context) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 70), // height of bottom nav
-            child: Wrap(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.add),
-                  title: const Text("New Lesson With Gemini"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const TeachToLearnAi(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.history),
-                  title: const Text("View old Gemini Lessons"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                        const TeachToLearnAi(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          );
-        },
+        builder: (context) => Padding(
+          padding: const EdgeInsets.only(bottom: 70),
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.add),
+                title: const Text("New Lesson With Gemini"),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TeachToLearnAi(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text("View old Gemini Lessons"),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const TeachToLearnAi(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       );
     } else if (index == 1) {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        builder: (context) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 70), // height of bottom nav
-            child: Wrap(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.visibility),
-                  title: const Text("View Flashcards"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const UserFlashcardSetsScreen(),
-                      ),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.add),
-                  title: const Text("Add a New Flashcard Set"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                        const CreateFlashcardSetScreen(),
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          );
-        },
+        builder: (context) => Padding(
+          padding: const EdgeInsets.only(bottom: 70),
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.visibility),
+                title: const Text("View Flashcards"),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const UserFlashcardSetsScreen(),
+                    ),
+                  );
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.add),
+                title: const Text("Add New Flashcard Set"),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) =>
+                      const CreateFlashcardSetScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ),
+        ),
       );
     } else if (index == 4) {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        builder: (context) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 70), // height of bottom nav
-            child: Wrap(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.visibility),
-                  title: const Text("View Profile"),
-                  onTap: () {
-                    Navigator.pop(context);
+        builder: (context) => Padding(
+          padding: const EdgeInsets.only(bottom: 70),
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.visibility),
+                title: const Text("View Profile"),
+                onTap: () {
+                  Navigator.pop(context);
+
+                  final currentUser =
+                      FirebaseAuth.instance.currentUser;
+
+                  if (currentUser != null) {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => const ProfilePage(),
+                        builder: (_) =>
+                            ProfilePage(userId: currentUser.uid),
                       ),
                     );
-                  },
-                ),
-              ],
-            ),
-          );
-        },
+                  }
+                },
+              ),
+            ],
+          ),
+        ),
       );
     } else {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
-        builder: (context) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 70), // height of bottom nav
-            child: Wrap(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.question_mark),
-                  title: const Text("Coming soon"),
-                  onTap: () {
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            ),
-          );
-        },
+        builder: (context) => Padding(
+          padding: const EdgeInsets.only(bottom: 70),
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.question_mark),
+                title: const Text("Coming soon"),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
+
+  // ---------------- UI ----------------
 
   @override
   Widget build(BuildContext context) {
@@ -243,11 +307,13 @@ class _MainMenuState extends State<MainMenu> {
                     ),
                   ),
                 ),
+
                 ListTile(
                   leading: const Icon(Icons.person),
                   title: const Text("View Profile"),
                   onTap: () {
                     Navigator.pop(context);
+
                     if (currentUser != null) {
                       Navigator.push(
                         context,
@@ -259,6 +325,7 @@ class _MainMenuState extends State<MainMenu> {
                     }
                   },
                 ),
+
                 ListTile(
                   leading: const Icon(Icons.settings),
                   title: const Text("Settings"),
@@ -267,12 +334,14 @@ class _MainMenuState extends State<MainMenu> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (_) => const SettingsPage()),
+                        builder: (_) => const SettingsPage(),
+                      ),
                     );
                   },
                 ),
-                // Place Logout button to bottom of menu.
+
                 const Spacer(),
+
                 ListTile(
                   leading:
                   const Icon(Icons.logout, color: Colors.red),
@@ -282,9 +351,34 @@ class _MainMenuState extends State<MainMenu> {
                   ),
                   onTap: () async {
                     Navigator.pop(context);
-                    await FirebaseAuth.instance.signOut();
+
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text("Log Out"),
+                        content: const Text("Are you sure you want to log out?"),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text("Cancel"),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              "Log Out",
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      await FirebaseAuth.instance.signOut();
+                    }
                   },
                 ),
+
                 const SizedBox(height: 16),
               ],
             ),
@@ -294,29 +388,33 @@ class _MainMenuState extends State<MainMenu> {
 
       appBar: AppBar(
         backgroundColor: Colors.blueGrey,
-        title: TextField(
-          controller: _searchController,
-          focusNode: _searchFocusNode,
-          decoration: InputDecoration(
-            hintText: "Search users...",
-            filled: true,
-            fillColor: Colors.white,
-            contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
+        title: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: TextField(
+            controller: _searchController,
+            focusNode: _searchFocusNode,
+            decoration: InputDecoration(
+              hintText: "Search users or flashcard sets...",
+              filled: true,
+              fillColor: Colors.white,
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 10,
+              ),
             ),
-            prefixIcon: const Icon(Icons.search),
           ),
         ),
         actions: [
           Builder(
             builder: (context) => IconButton(
               icon: const Icon(Icons.menu),
-              onPressed: () {
-                Scaffold.of(context).openEndDrawer();
-              },
+              onPressed: () =>
+                  Scaffold.of(context).openEndDrawer(),
             ),
           ),
         ],
@@ -324,7 +422,7 @@ class _MainMenuState extends State<MainMenu> {
 
       body: Stack(
         children: [
-          // Main Content
+          // Main Welcome Content
           StreamBuilder<DocumentSnapshot>(
             stream: currentUser != null
                 ? FirebaseFirestore.instance
@@ -349,8 +447,9 @@ class _MainMenuState extends State<MainMenu> {
                     Text(
                       "Welcome, $username 👋",
                       style: const TextStyle(
-                          fontSize: 26,
-                          fontWeight: FontWeight.bold),
+                        fontSize: 26,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 30),
                     Image.asset(
@@ -363,58 +462,111 @@ class _MainMenuState extends State<MainMenu> {
             },
           ),
 
-          if (_searchResults.isNotEmpty)
+          // ---------------- SEARCH RESULTS ----------------
+
+          if (_userResults.isNotEmpty ||
+              _flashcardSetResults.isNotEmpty ||
+              _searchController.text.isNotEmpty)
             Positioned(
-              top: 10, left: 16, right: 16,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: Material(
-                  elevation: 8,
-                  borderRadius: BorderRadius.circular(16),
-                  child: ClipRRect(
+              top: 10,
+              left: 16,
+              right: 16,
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(16),
+                child: Container(
+                  constraints:
+                  const BoxConstraints(maxHeight: 350),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      color: Colors.white,
-                      constraints: const BoxConstraints(maxHeight: 300),
-                      child: ListView.builder(
-                        shrinkWrap: true,
-                        itemCount: _searchResults.length,
-                        itemBuilder: (context, index) {
-                          final user = _searchResults[index];
+                  ),
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                      children: [
 
-                          return Material(
-                            color: Colors.white,
-                            child: InkWell(
-                              hoverColor: Colors.grey.shade200,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        ProfilePage(userId: user['uid']),
-                                  ),
-                                );
-
-                                setState(() {
-                                  _searchResults = [];
-                                  _searchController.clear();
-                                  _searchFocusNode.unfocus();
-                                });
-                              },
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 14,
-                                ),
-                                child: Text(
-                                  user['username'],
-                                  style: const TextStyle(fontSize: 16),
-                                ),
-                              ),
+                        const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Text(
+                            "Users",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
                             ),
+                          ),
+                        ),
+
+                        if (_userResults.isEmpty)
+                          const Padding(
+                            padding:
+                            EdgeInsets.symmetric(horizontal: 16),
+                            child: Text("No users found"),
+                          ),
+
+                        ..._userResults.map((user) {
+                          return ListTile(
+                            leading: const Icon(Icons.person),
+                            title: Text(user['name']),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ProfilePage(
+                                      userId: user['id']),
+                                ),
+                              );
+                              _clearSearch();
+                            },
                           );
-                        },
-                      ),
+                        }),
+
+                        const Divider(),
+
+                        const Padding(
+                          padding: EdgeInsets.all(12),
+                          child: Text(
+                            "Flashcard Sets",
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+
+                        if (_flashcardSetResults.isEmpty)
+                          const Padding(
+                            padding:
+                            EdgeInsets.symmetric(horizontal: 16),
+                            child: Text("No flashcard sets found"),
+                          ),
+
+                        ..._flashcardSetResults.map((set) {
+                          return ListTile(
+                            leading: const Icon(Icons.style),
+                              title: Text(
+                                "${set['name']} | "
+                                "${set['cards']} cards | by "
+                                "${set['ownerName']}",
+                              ),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      ViewFlashcardsScreen(
+                                        setId: set['id'],
+                                        setTitle: set['name'],
+                                      ),
+                                ),
+                              );
+                              _clearSearch();
+                            },
+                          );
+                        }),
+                      ],
                     ),
                   ),
                 ),
