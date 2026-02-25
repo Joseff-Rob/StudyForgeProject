@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:StudyForgeProject/screens/create_flashcard_set_screen.dart';
 import 'package:StudyForgeProject/screens/user_flashcards_screen.dart';
+import 'package:StudyForgeProject/screens/user_lessons_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -158,15 +159,21 @@ class _MainMenuState extends State<MainMenu> {
               ListTile(
                 leading: const Icon(Icons.add),
                 title: const Text("New Lesson With Gemini"),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const TeachToLearnAi(),
-                    ),
-                  );
-                },
+                  onTap: () {
+                    Navigator.pop(context);
+
+                    final tempLessonId =
+                        FirebaseFirestore.instance.collection('teach_lessons').doc().id;
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => TeachToLearnAi(
+                          lessonId: tempLessonId,
+                        ),
+                      ),
+                    );
+                  }
               ),
               ListTile(
                 leading: const Icon(Icons.history),
@@ -176,7 +183,7 @@ class _MainMenuState extends State<MainMenu> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const TeachToLearnAi(),
+                      builder: (_) => const UserLessonsScreen(),
                     ),
                   );
                 },

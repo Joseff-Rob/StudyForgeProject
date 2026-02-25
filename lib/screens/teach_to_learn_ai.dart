@@ -1,30 +1,89 @@
+import 'dart:async';
+
 import 'package:StudyForgeProject/consts.dart';
+import 'package:StudyForgeProject/services/teach_to_learn_service.dart';
 import 'package:dash_chat_2/dash_chat_2.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TeachToLearnAi extends StatefulWidget {
-  const TeachToLearnAi({super.key});
+  final String lessonId;
+
+  const TeachToLearnAi({
+    super.key,
+    required this.lessonId,
+  });
 
   @override
   State<TeachToLearnAi> createState() => _TeachToLearnAIState();
 }
 
 class _TeachToLearnAIState extends State<TeachToLearnAi> {
-  final ChatUser _currentUser = ChatUser(id: '1', firstName: "Student");
-  final ChatUser _geminiUser = ChatUser(id: '2', firstName: "Gemini");
 
-  List<ChatMessage> _messages = <ChatMessage>[];
-  List<ChatUser> _typingUser = <ChatUser>[];
+  final TeachToLearnService _service = TeachToLearnService();
+
+  final ChatUser _currentUser =
+  ChatUser(id: '1', firstName: "Student");
+
+  final ChatUser _geminiUser =
+  ChatUser(id: '2', firstName: "Gemini");
+
+  List<ChatMessage> _messages = [];
+  List<ChatUser> _typingUser = [];
 
   final String geminiApiKey = GEMINI_API_KEY;
   final String modelName = 'gemini-2.5-flash';
 
-  final TextEditingController _topicController = TextEditingController();
+  final TextEditingController _topicController =
+  TextEditingController();
 
   bool _lessonStarted = false;
   String _currentTopic = "";
+
+  StreamSubscription? _messageSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToMessages();
+  }
+
+  @override
+  void dispose() {
+    _messageSub?.cancel();
+    super.dispose();
+  }
+
+  // --------------------------------------------------
+  // MESSAGE STREAM
+  // --------------------------------------------------
+
+  void _listenToMessages() {
+    _messageSub =
+        _service.streamMessages(widget.lessonId).listen((messages) {
+
+          if (!mounted) return;
+
+          setState(() {
+            _messages = messages.map((m) {
+              return ChatMessage(
+                text: m['text'] ?? '',
+                user: m['sender'] == "student"
+                    ? _currentUser
+                    : _geminiUser,
+                createdAt:
+                (m['createdAt'] as Timestamp).toDate(),
+              );
+            }).toList();
+          });
+        });
+  }
+
+  // --------------------------------------------------
+  // UI
+  // --------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +100,6 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     );
   }
 
-
   Widget _buildIntroScreen() {
     return Center(
       child: Padding(
@@ -49,22 +107,31 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.school, size: 80, color: Colors.blueGrey),
+
+            const Icon(Icons.school,
+                size: 80, color: Colors.blueGrey),
+
             const SizedBox(height: 20),
+
             const Text(
               "Teach-To-Learn",
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+              style:
+              TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
             ),
+
             const SizedBox(height: 12),
+
             const Text(
-              "Enter a topic and teach it back to Gemini.\nActive recall improves retention.",
+              "Enter a topic and teach it back to Gemini.",
               textAlign: TextAlign.center,
             ),
+
             const SizedBox(height: 30),
+
             TextField(
               controller: _topicController,
               decoration: InputDecoration(
-                hintText: "Enter topic (e.g. Binary Trees)",
+                hintText: "Enter topic",
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -72,17 +139,15 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
                 ),
               ),
             ),
+
             const SizedBox(height: 20),
+
             ElevatedButton(
               onPressed: () {
                 if (_topicController.text.trim().isNotEmpty) {
                   _startLesson(_topicController.text.trim());
                 }
               },
-              style: ElevatedButton.styleFrom(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-              ),
               child: const Text("Start Lesson"),
             ),
           ],
@@ -91,34 +156,25 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     );
   }
 
-
-
   Widget _buildChatUI() {
     return Column(
       children: [
+
         Container(
           width: double.infinity,
-          padding:
-          const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          padding: const EdgeInsets.all(12),
           color: Colors.amber.shade200,
           child: Text(
-            "Topic: $_currentTopic\n⚠️ Gemini can make mistakes. Verify important info.",
+            "Topic: $_currentTopic\n⚠️ Gemini can make mistakes.",
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
-            ),
+            style: const TextStyle(fontWeight: FontWeight.w600),
           ),
         ),
+
         Expanded(
           child: DashChat(
             currentUser: _currentUser,
             typingUsers: _typingUser,
-            messageOptions: const MessageOptions(
-              currentUserContainerColor: Colors.black,
-              containerColor: Color.fromRGBO(0, 166, 126, 1),
-              textColor: Colors.white,
-            ),
             onSend: (ChatMessage m) {
               getChatResponse(m);
             },
@@ -129,130 +185,145 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     );
   }
 
-  // ===============================
-  // 🔹 START LESSON
-  // ===============================
+  // --------------------------------------------------
+  // START LESSON
+  // --------------------------------------------------
 
   Future<void> _startLesson(String topic) async {
+
     setState(() {
       _lessonStarted = true;
       _currentTopic = topic;
       _typingUser.add(_geminiUser);
     });
 
-    final structuredPrompt = """
-      You are participating in a Teach-To-Learn session.
-      
-      The student will teach YOU the topic: "$topic".
-      
-      Your role:
-      - Act like a curious beginner who knows nothing.
-      - Ask the student to explain the topic in their own words.
-      - Ask follow-up questions when explanations are unclear.
-      - Identify missing key concepts.
-      - Point out misunderstandings politely.
-      - Encourage deeper thinking.
-      - DO NOT fully teach the topic yourself unless correcting mistakes.
-      - Make sure to confirm with student often that they are still within scope of their learning.
-      
-      Start by saying you are ready to learn and ask the student to begin explaining.
-      """;
+    // Do NOT block UI waiting for API response
+    Future.microtask(() async {
 
-    final responseText = await generateGeminiResponse(structuredPrompt);
+      try {
 
-    setState(() {
-      _messages.insert(
-        0,
-        ChatMessage(
-          user: _geminiUser,
-          createdAt: DateTime.now(),
+        final responseText = await generateGeminiResponse(
+            "You are a curious beginner. "
+                "You are learning about $topic. "
+                "Ask the student to start teaching you.");
+
+        await _service.addMessage(
+          lessonId: widget.lessonId,
           text: responseText,
-        ),
-      );
-      _typingUser.remove(_geminiUser);
+          sender: "gemini",
+        );
+
+      } catch (e) {
+
+        await _service.addMessage(
+          lessonId: widget.lessonId,
+          text: "Ready! Please start teaching me about $topic",
+          sender: "gemini",
+        );
+      }
+
+      if (mounted) {
+        setState(() {
+          _typingUser.remove(_geminiUser);
+        });
+      }
+
     });
   }
 
-  // ===============================
-  // 🔹 CHAT RESPONSE
-  // ===============================
+  // --------------------------------------------------
+  // CHAT RESPONSE
+  // --------------------------------------------------
 
   Future<void> getChatResponse(ChatMessage m) async {
-    setState(() {
-      _messages.insert(0, m);
-      _typingUser.add(_geminiUser);
-    });
 
     try {
-      final responseText = await generateGeminiResponse(m.text);
+
+      await _service.addMessage(
+        lessonId: widget.lessonId,
+        text: m.text,
+        sender: "student",
+      );
 
       setState(() {
-        _messages.insert(
-          0,
-          ChatMessage(
-            user: _geminiUser,
-            createdAt: DateTime.now(),
-            text: responseText,
-          ),
-        );
+        _typingUser.add(_geminiUser);
       });
+
+      final responseText = await generateGeminiResponse("""
+Topic: $_currentTopic
+
+Student message:
+${m.text}
+
+You are a curious student learning this topic.
+Ask questions and stay in learning mode.
+""");
+
+      await _service.addMessage(
+        lessonId: widget.lessonId,
+        text: responseText,
+        sender: "gemini",
+      );
+
     } catch (e) {
-      setState(() {
-        _messages.insert(
-          0,
-          ChatMessage(
-            user: _geminiUser,
-            createdAt: DateTime.now(),
-            text: "Error: $e",
-          ),
-        );
-      });
+
+      await _service.addMessage(
+        lessonId: widget.lessonId,
+        text: "Error: $e",
+        sender: "gemini",
+      );
+
     } finally {
-      setState(() {
-        _typingUser.remove(_geminiUser);
-      });
+
+      if (mounted) {
+        setState(() {
+          _typingUser.remove(_geminiUser);
+        });
+      }
     }
   }
 
-  // ===============================
-  // 🔹 GEMINI CALL
-  // ===============================
+  // --------------------------------------------------
+  // GEMINI API
+  // --------------------------------------------------
 
   Future<String> generateGeminiResponse(String prompt) async {
-    final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent');
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': geminiApiKey,
-      },
-      body: jsonEncode({
-        "contents": [
-          {
-            "parts": [
-              {"text": prompt}
-            ]
-          }
-        ]
-      }),
-    );
+    try {
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final candidates = data['candidates'] as List<dynamic>?;
-      if (candidates != null && candidates.isNotEmpty) {
-        final content = candidates[0]['content'] as Map<String, dynamic>?;
-        final parts = content?['parts'] as List<dynamic>?;
-        if (parts != null && parts.isNotEmpty) {
-          return parts.map((p) => p['text'] ?? '').join('');
-        }
+      final url = Uri.parse(
+          'https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$geminiApiKey');
+
+      final response = await http.post(
+        url,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: jsonEncode({
+          "contents": [
+            {
+              "parts": [
+                {"text": prompt}
+              ]
+            }
+          ]
+        }),
+      );
+
+      print("Gemini status: ${response.statusCode}");
+      print(response.body);
+
+      if (response.statusCode != 200) {
+        return "Gemini is not available right now.";
       }
-      return 'No content returned';
-    } else {
-      throw Exception(
-          'Gemini API error: ${response.statusCode} ${response.body}');
+
+      final data = jsonDecode(response.body);
+
+      return data['candidates'][0]['content']['parts'][0]['text'];
+
+    } catch (e) {
+      print("Gemini error: $e");
+      return "Error contacting Gemini.";
     }
   }
 }
