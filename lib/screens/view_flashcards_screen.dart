@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_flashcard_service.dart';
+import 'main_menu.dart';
 
 class ViewFlashcardsScreen extends StatefulWidget {
   final String setId;
@@ -594,6 +595,38 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
                   const SizedBox(height: 30),
                   const Text("Tap card to flip"),
+                  const SizedBox(height: 40),
+
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.quiz),
+                        label: const Text(
+                          "Complete a quiz on this flashcard set",
+                          style: TextStyle(fontWeight: FontWeight.w600),
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          backgroundColor: Colors.white,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pushAndRemoveUntil(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const MainMenu(),
+                            ),
+                                (route) => false,
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+
                   const SizedBox(height: 40),
                 ],
               ),
