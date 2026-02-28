@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../services/teach_to_learn_service.dart';
 import 'profile_page.dart';
 import 'teach_to_learn_ai.dart';
 import 'settings.dart';
@@ -159,17 +160,17 @@ class _MainMenuState extends State<MainMenu> {
               ListTile(
                 leading: const Icon(Icons.add),
                 title: const Text("New Lesson With Gemini"),
-                  onTap: () {
+                  onTap: () async {
                     Navigator.pop(context);
 
-                    final tempLessonId =
-                        FirebaseFirestore.instance.collection('teach_lessons').doc().id;
+                    final lessonId = await TeachToLearnService()
+                        .createLesson(topic: ""); // create empty topic initially
 
                     Navigator.push(
                       context,
                       MaterialPageRoute(
                         builder: (_) => TeachToLearnAi(
-                          lessonId: tempLessonId,
+                          lessonId: lessonId,
                         ),
                       ),
                     );

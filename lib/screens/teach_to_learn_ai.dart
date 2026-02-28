@@ -47,6 +47,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
   @override
   void initState() {
     super.initState();
+    _loadLesson();
     _listenToMessages();
   }
 
@@ -79,6 +80,21 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
             }).toList();
           });
         });
+  }
+
+  Future<void> _loadLesson() async {
+    final lesson = await _service.getLesson(widget.lessonId);
+
+    if (lesson != null &&
+        lesson['topic'] != null &&
+        lesson['topic'].toString().isNotEmpty) {
+      _currentTopic = lesson['topic'];
+      _lessonStarted = true;
+    }
+
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   // --------------------------------------------------
@@ -165,7 +181,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
           padding: const EdgeInsets.all(12),
           color: Colors.amber.shade200,
           child: Text(
-            "Topic: $_currentTopic\n⚠️ Gemini can make mistakes.",
+            "Topic: $_currentTopic\n⚠️ Gemini can make mistakes. Verify Important Information",
             textAlign: TextAlign.center,
             style: const TextStyle(fontWeight: FontWeight.w600),
           ),
@@ -190,6 +206,14 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
   // --------------------------------------------------
 
   Future<void> _startLesson(String topic) async {
+
+    await FirebaseFirestore.instance
+        .collection('teach_lessons')
+        .doc(widget.lessonId)
+        .update({
+      'topic': topic,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
 
     setState(() {
       _lessonStarted = true;

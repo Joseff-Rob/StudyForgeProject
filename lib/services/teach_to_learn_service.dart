@@ -36,16 +36,6 @@ class TeachToLearnService {
 
     final lessonDoc = await lessonRef.get();
 
-    // 🔥 If lesson does not exist → create it first
-    if (!lessonDoc.exists) {
-      await lessonRef.set({
-        'createdAt': FieldValue.serverTimestamp(),
-        'updatedAt': FieldValue.serverTimestamp(),
-        'messageCount': 0,
-        'ownerId': FirebaseAuth.instance.currentUser?.uid,
-      });
-    }
-
     await lessonRef.collection('messages').add({
       'text': text,
       'sender': sender,
