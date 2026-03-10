@@ -1,9 +1,9 @@
 import 'dart:math';
+import 'package:StudyForgeProject/screens/quiz_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_flashcard_service.dart';
-import 'main_menu.dart';
 
 class ViewFlashcardsScreen extends StatefulWidget {
   final String setId;
@@ -597,6 +597,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                   const Text("Tap card to flip"),
                   const SizedBox(height: 40),
 
+                  if (_cards.length >= 4)
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 24),
                     child: SizedBox(
@@ -615,17 +616,17 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                           ),
                         ),
                         onPressed: () {
-                          Navigator.pushAndRemoveUntil(
+                          Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => const MainMenu(),
+                              builder: (_) => QuizScreen(setId: widget.setId),
                             ),
-                                (route) => false,
                           );
                         },
                       ),
                     ),
                   ),
+
 
                   const SizedBox(height: 40),
                 ],

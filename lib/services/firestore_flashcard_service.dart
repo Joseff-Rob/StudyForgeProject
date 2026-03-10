@@ -1,5 +1,9 @@
+import 'dart:math';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+import '../models/quiz_question.dart';
 
 class FlashcardService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -177,5 +181,65 @@ class FlashcardService {
 
     // Then delete the set itself
     await setRef.delete();
+  }
+
+  Future<List<QuizQuestion>> generateQuizFromSet(
+      String setId, {
+        int optionsPerQuestion = 4,
+        int questionLimit = 10,
+      }) async {
+    final snapshot = await _firestore
+        .collection('flashcard_sets')
+        .doc(setId)
+        .collection('flashcards')
+        .get();
+
+    final flashcards = snapshot.docs.map((doc) {
+      final data = doc.data();
+      return {
+        'question': data['question'] as String,
+        'answer': data['answer'] as String,
+      };
+    }).toList();
+
+    if (flashcards.length < optionsPerQuestion) {
+      throw Exception("Not enough flashcards to generate MCQ quiz.");
+    }
+
+    final random = Random();
+    flashcards.shuffle();
+
+    final selectedQuestions =
+    flashcards.take(min(questionLimit, flashcards.length)).toList();
+
+    List<QuizQuestion> quiz = [];
+
+    for (var card in selectedQuestions) {
+      final correctAnswer = card['answer'];
+
+      // collect wrong answers
+      List<String> wrongAnswers = flashcards
+          .where((f) => f['answer'] != correctAnswer)
+          .map((f) => f['answer']!)
+          .toList();
+
+      wrongAnswers.shuffle();
+
+      final options = [
+        correctAnswer!,
+        ...wrongAnswers.take(optionsPerQuestion - 1),
+      ];
+
+      options.shuffle();
+
+      quiz.add(
+        QuizQuestion(
+          question: card['question']!,
+          options: options,
+          correctAnswer: correctAnswer,
+        ),
+      );
+    }
+    return quiz;
   }
 }
