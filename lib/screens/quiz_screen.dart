@@ -141,7 +141,7 @@ class _QuizScreenState extends State<QuizScreen>
         title: const Text("Flashcard Quiz"),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 70),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
