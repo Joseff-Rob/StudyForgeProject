@@ -201,8 +201,9 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
                         TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text("Cancel")),
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Cancel"),
+                        ),
 
                         ElevatedButton(
                           onPressed: () async {
@@ -216,7 +217,51 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                             Navigator.pop(context);
                           },
                           child: const Text("Save"),
-                        )
+                        ),
+
+                        // Delete button with confirmation
+                        ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red, // make button red
+                            foregroundColor: Colors.white, // text white
+                          ),
+                          onPressed: () async {
+                            // Show confirmation dialog
+                            final confirm = await showDialog<bool>(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text("Delete Flashcard"),
+                                content: const Text(
+                                  "Are you sure you want to delete this flashcard?",
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, false),
+                                    child: const Text("Cancel"),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context, true),
+                                    child: const Text(
+                                      "Delete",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            // If confirmed, delete the flashcard
+                            if (confirm == true) {
+                              await _flashcardService.deleteFlashcard(
+                                setId: widget.setId,
+                                flashcardId: card['id'],
+                              );
+
+                              Navigator.pop(context); // close the edit dialog
+                            }
+                          },
+                          child: const Text("Delete Card"),
+                        ),
                       ],
                     )
                   ],

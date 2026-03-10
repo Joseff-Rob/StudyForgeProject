@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:StudyForgeProject/screens/quiz_results_screen.dart';
 import 'package:flutter/material.dart';
 
@@ -13,8 +15,11 @@ class QuizScreen extends StatefulWidget {
   State<QuizScreen> createState() => _QuizScreenState();
 }
 
-class _QuizScreenState extends State<QuizScreen> {
+class _QuizScreenState extends State<QuizScreen>
+    with TickerProviderStateMixin {
   final FlashcardService _flashcardService = FlashcardService();
+  Map<String, AnimationController> _optionControllers = {};
+  late AnimationController _shakeController;
 
   List<QuizQuestion> _quiz = [];
   int _currentQuestion = 0;
@@ -27,6 +32,20 @@ class _QuizScreenState extends State<QuizScreen> {
   void initState() {
     super.initState();
     _loadQuiz();
+
+    _shakeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+  }
+
+  @override
+  void dispose() {
+    _shakeController.dispose();
+    for (var c in _optionControllers.values) {
+      c.dispose();
+    }
+    super.dispose();
   }
 
   Future<void> _loadQuiz() async {
@@ -45,8 +64,17 @@ class _QuizScreenState extends State<QuizScreen> {
       _selectedAnswer = answer;
       _answered = true;
 
-      if (answer == _quiz[_currentQuestion].correctAnswer) {
+      final correct = _quiz[_currentQuestion].correctAnswer;
+      if (answer == correct) {
         _score++;
+
+        // Pulse animation for correct answer
+        _optionControllers[answer]?.forward(from: 0);
+      } else {
+        // Shake animation for wrong answer
+        _shakeController.forward(from: 0);
+        // Also pulse correct answer
+        _optionControllers[correct]?.forward(from: 0);
       }
     });
   }
@@ -145,20 +173,59 @@ class _QuizScreenState extends State<QuizScreen> {
 
             /// Options
             ...question.options.map((option) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: _getButtonColor(option),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+              // Create controller if not exist
+              _optionControllers.putIfAbsent(option, () => AnimationController(
+                vsync: this,
+                duration: const Duration(milliseconds: 300),
+                lowerBound: 0.0,
+                upperBound: 0.1,
+              ));
+
+              final scale = Tween<double>(begin: 1.0, end: 1.1)
+                  .animate(CurvedAnimation(
+                parent: _optionControllers[option]!,
+                curve: Curves.easeOut,
+              ));
+
+              return AnimatedBuilder(
+                animation: Listenable.merge([_shakeController, scale]),
+                builder: (context, child) {
+                  double offset = 0;
+                  if (_selectedAnswer == option && _selectedAnswer != _quiz[_currentQuestion].correctAnswer) {
+                    // shake animation
+                    offset = 8 * sin(_shakeController.value * pi * 4);
+                  }
+
+                  return Transform.translate(
+                    offset: Offset(offset, 0),
+                    child: Transform.scale(
+                      scale: (_selectedAnswer == option && _selectedAnswer == _quiz[_currentQuestion].correctAnswer)
+                          ? scale.value
+                          : 1.0,
+                      child: child,
                     ),
-                    onPressed: () => _selectAnswer(option),
-                    child: Text(
-                      option,
-                      style: const TextStyle(fontSize: 16),
+                  );
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _getButtonColor(option),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                      ),
+                      onPressed: () => _selectAnswer(option),
+                      child: Text(
+                        option,
+                        textAlign: TextAlign.center,
+                        softWrap: true,
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ),
                   ),
                 ),
