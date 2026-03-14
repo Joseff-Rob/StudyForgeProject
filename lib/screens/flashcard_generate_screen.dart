@@ -5,15 +5,15 @@ import '../services/flashcard_generator_service.dart';
 import '../services/firestore_flashcard_service.dart';
 import '../consts.dart';
 
-class PdfFlashcardScreen extends StatefulWidget {
-  const PdfFlashcardScreen({super.key});
+class FlashcardGenerateScreen extends StatefulWidget {
+  const FlashcardGenerateScreen({super.key});
 
   @override
-  State<PdfFlashcardScreen> createState() =>
-      _PdfFlashcardScreenState();
+  State<FlashcardGenerateScreen> createState() =>
+      _FlashcardGenerateScreenState();
 }
 
-class _PdfFlashcardScreenState extends State<PdfFlashcardScreen> {
+class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _titleController = TextEditingController();
 
@@ -92,24 +92,44 @@ class _PdfFlashcardScreenState extends State<PdfFlashcardScreen> {
       loading = true;
     });
 
-    final setId = await _flashcardService.createFlashcardSet(
-      title: _titleController.text,
-      isPublic: _isPublic,
-    );
-
-    for (final card in generatedCards) {
-      await _flashcardService.addFlashcard(
-        setId: setId,
-        question: card["question"]!,
-        answer: card["answer"]!,
+    try {
+      final setId = await _flashcardService.createFlashcardSet(
+        title: _titleController.text,
+        isPublic: _isPublic, // respect the toggle
       );
+
+      for (final card in generatedCards) {
+        await _flashcardService.addFlashcard(
+          setId: setId,
+          question: card["question"]!,
+          answer: card["answer"]!,
+        );
+      }
+
+      // Show confirmation
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "Flashcard set '${_titleController.text}' created successfully!",
+            ),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Optionally clear the form / navigate back after a short delay
+        await Future.delayed(const Duration(seconds: 2));
+        if (mounted) Navigator.pop(context);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error saving flashcards: $e")),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => loading = false);
     }
-
-    setState(() {
-      loading = false;
-    });
-
-    Navigator.pop(context);
   }
 
   @override

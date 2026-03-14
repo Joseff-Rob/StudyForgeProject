@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:StudyForgeProject/screens/create_flashcard_set_screen.dart';
-import 'package:StudyForgeProject/screens/pdf_flashcard_screen.dart';
+import 'package:StudyForgeProject/screens/flashcard_generate_screen.dart';
 import 'package:StudyForgeProject/screens/user_flashcards_screen.dart';
 import 'package:StudyForgeProject/screens/user_lessons_screen.dart';
 import 'package:flutter/material.dart';
@@ -98,9 +98,6 @@ class _MainMenuState extends State<MainMenu> {
           isLessThanOrEqualTo: lowerQuery + '\uf8ff')
           .limit(5)
           .get();
-
-
-      debugPrint("Found sets: ${setSnapshot.docs.length}");
 
       // Collect owner IDs
       final ownerIds = setSnapshot.docs
@@ -286,7 +283,7 @@ class _MainMenuState extends State<MainMenu> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => PdfFlashcardScreen()
+                      builder: (_) => FlashcardGenerateScreen()
                     ),
                   );
                 },
@@ -330,96 +327,126 @@ class _MainMenuState extends State<MainMenu> {
         width: MediaQuery.of(context).size.width * 0.75,
         child: Drawer(
           child: SafeArea(
-            child: Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 24),
-                  color: Colors.blueGrey,
-                  child: const Text(
-                    "Menu",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
+            child: StreamBuilder<DocumentSnapshot>(
+              stream: currentUser != null
+                  ? FirebaseFirestore.instance
+                  .collection('users')
+                  .doc(currentUser.uid)
+                  .snapshots()
+                  : null,
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-                ListTile(
-                  leading: const Icon(Icons.person),
-                  title: const Text("View Profile"),
-                  onTap: () {
-                    Navigator.pop(context);
+                final data = snapshot.data!.data() as Map<String, dynamic>;
+                final username = data['username'] ?? "User";
+                final isAdmin = data['isAdmin'] ?? false;
 
-                    if (currentUser != null) {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) =>
-                              ProfilePage(userId: currentUser.uid),
+                return Column(
+                  children: [
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 24),
+                      color: Colors.blueGrey,
+                      child: Text(
+                        isAdmin ? "Admin Menu" : "Menu",
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                      );
-                    }
-                  },
-                ),
-
-                ListTile(
-                  leading: const Icon(Icons.settings),
-                  title: const Text("Settings"),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const SettingsPage(),
                       ),
-                    );
-                  },
-                ),
+                    ),
 
-                const Spacer(),
+                    ListTile(
+                      leading: const Icon(Icons.person),
+                      title: const Text("View Profile"),
+                      onTap: () {
+                        Navigator.pop(context);
 
-                ListTile(
-                  leading:
-                  const Icon(Icons.logout, color: Colors.red),
-                  title: const Text(
-                    "Log Out",
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  onTap: () async {
-                    Navigator.pop(context);
-
-                    final confirm = await showDialog<bool>(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text("Log Out"),
-                        content: const Text("Are you sure you want to log out?"),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text("Cancel"),
-                          ),
-                          TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text(
-                              "Log Out",
-                              style: TextStyle(color: Colors.red),
+                        if (currentUser != null) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProfilePage(userId: currentUser.uid),
                             ),
+                          );
+                        }
+                      },
+                    ),
+
+                    ListTile(
+                      leading: const Icon(Icons.settings),
+                      title: const Text("Settings"),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsPage(),
                           ),
-                        ],
+                        );
+                      },
+                    ),
+
+                    // ---------------- Admin-only option ----------------
+                    if (isAdmin)
+                      ListTile(
+                        leading: const Icon(Icons.report),
+                        title: const Text("Report Logs"),
+                        onTap: () {
+                          Navigator.pop(context);
+                          // For now, just go back to main menu
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Admin Report Logs (placeholder)")),
+                          );
+                        },
                       ),
-                    );
 
-                    if (confirm == true) {
-                      await FirebaseAuth.instance.signOut();
-                    }
-                  },
-                ),
+                    const Spacer(),
 
-                const SizedBox(height: 16),
-              ],
+                    ListTile(
+                      leading: const Icon(Icons.logout, color: Colors.red),
+                      title: const Text(
+                        "Log Out",
+                        style: TextStyle(color: Colors.red),
+                      ),
+                      onTap: () async {
+                        Navigator.pop(context);
+
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Log Out"),
+                            content: const Text("Are you sure you want to log out?"),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, false),
+                                child: const Text("Cancel"),
+                              ),
+                              TextButton(
+                                onPressed: () => Navigator.pop(context, true),
+                                child: const Text(
+                                  "Log Out",
+                                  style: TextStyle(color: Colors.red),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+
+                        if (confirm == true) {
+                          await FirebaseAuth.instance.signOut();
+                        }
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+                  ],
+                );
+              },
             ),
           ),
         ),

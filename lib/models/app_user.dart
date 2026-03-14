@@ -3,12 +3,14 @@ class AppUser {
   final String email;
   final String username;
   final String usernameLower;
+  final bool isAdmin;
 
   AppUser({
     required this.uid,
     required this.email,
     required this.username,
     required this.usernameLower,
+    this.isAdmin = false,
   });
 
   Map<String, dynamic> toMap() {
@@ -17,6 +19,7 @@ class AppUser {
       'email': email,
       'username': username,
       'username_lower': usernameLower,
+      'isAdmin': isAdmin,
     };
   }
 
@@ -26,6 +29,7 @@ class AppUser {
       email: map['email'] ?? '',
       username: map['username'] ?? '',
       usernameLower: map['username_lower'] ?? '',
+      isAdmin: map['isAdmin'] ?? false,
     );
   }
 }
