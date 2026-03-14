@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_flashcard_service.dart';
 
+import 'package:StudyForgeProject/screens/report_logs_screen.dart'; // placeholder
+
 class ViewFlashcardsScreen extends StatefulWidget {
   final String setId;
   final String setTitle;
@@ -404,6 +406,49 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
   }
 
+  void _reportFlashcardSet() {
+    final TextEditingController reportController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Report Flashcard Set"),
+        content: TextField(
+          controller: reportController,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: "Reason for reporting",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              final reason = reportController.text.trim();
+              if (reason.isNotEmpty) {
+                await FirebaseFirestore.instance.collection('reports').add({
+                  'setId': widget.setId,
+                  'setTitle': widget.setTitle,
+                  'reportedBy': FirebaseAuth.instance.currentUser?.uid,
+                  'reason': reason,
+                  'timestamp': FieldValue.serverTimestamp(),
+                });
+
+                Navigator.pop(context);
+              }
+            },
+            child: const Text("Submit"),
+          ),
+        ],
+      ),
+    );
+  }
+
   // -------------------------
   // CARD CONTROLS
   // -------------------------
@@ -449,28 +494,30 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
           .doc(widget.setId)
           .snapshots(),
       builder: (context, snapshot) {
-
         if (!snapshot.hasData) {
           return const Scaffold(
               body: Center(child: CircularProgressIndicator()));
         }
 
-        final data =
-        snapshot.data!.data() as Map<String, dynamic>;
-
+        final data = snapshot.data!.data() as Map<String, dynamic>;
         final liveTitle = data['title'] ?? widget.setTitle;
 
+        // Handle empty card list
         if (_cards.isEmpty) {
           return Scaffold(
             appBar: AppBar(
-              title: Text(liveTitle),
               backgroundColor: Colors.blueGrey,
+              leading: IconButton(
+                icon: const Icon(Icons.report, color: Colors.red),
+                tooltip: "Report Flashcard Set",
+                onPressed: _reportFlashcardSet,
+              ),
+              title: Text(liveTitle),
               actions: [
                 if (_isOwner)
                   IconButton(
                     icon: const Icon(Icons.edit),
-                    onPressed: () =>
-                        _showEditSetDialog(liveTitle),
+                    onPressed: () => _showEditSetDialog(liveTitle),
                   ),
               ],
             ),
@@ -488,6 +535,11 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
             backgroundColor: Colors.blueGrey,
             title: Text(liveTitle),
             actions: [
+              IconButton(
+                icon: const Icon(Icons.report, color: Colors.red),
+                tooltip: "Report Flashcard Set",
+                onPressed: _reportFlashcardSet,
+              ),
               if (_isOwner)
                 IconButton(
                   icon: const Icon(Icons.add),
@@ -497,31 +549,26 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
               if (_isOwner)
                 IconButton(
                   icon: const Icon(Icons.edit),
-                  onPressed: () =>
-                      _showEditSetDialog(liveTitle),
+                  onPressed: () => _showEditSetDialog(liveTitle),
                 ),
               if (_isOwner)
                 IconButton(
                   icon: const Icon(Icons.edit_note),
-                  onPressed: () =>
-                      _showEditFlashcardDialog(card),
+                  onPressed: () => _showEditFlashcardDialog(card),
                 ),
             ],
           ),
-
           body: SafeArea(
             child: SingleChildScrollView(
               child: Column(
                 children: [
-
                   const SizedBox(height: 40),
 
+                  // Flashcard display
                   GestureDetector(
                     onTap: _flipCard,
                     onLongPress: () {
                       if (!_isOwner) return;
-
-                      final card = _cards[_currentIndex];
 
                       showModalBottomSheet(
                         context: context,
@@ -539,18 +586,14 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                                   _showEditFlashcardDialog(card);
                                 },
                               ),
-
                               ListTile(
                                 leading: const Icon(Icons.add),
-                                title: const Text(
-                                  "Add Flashcard",
-                                ),
+                                title: const Text("Add Flashcard"),
                                 onTap: () {
                                   Navigator.pop(context);
                                   _showAddFlashcardDialog();
                                 },
                               ),
-
                               ListTile(
                                 leading: const Icon(Icons.delete, color: Colors.red),
                                 title: const Text(
@@ -570,42 +613,36 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                     child: AnimatedBuilder(
                       animation: _controller,
                       builder: (context, child) {
-
                         final angle = _controller.value * pi;
-
                         return Transform(
                           alignment: Alignment.center,
                           transform: Matrix4.rotationY(angle),
                           child: Container(
-                            width:
-                            MediaQuery.of(context).size.width *
-                                0.85,
+                            width: MediaQuery.of(context).size.width * 0.85,
                             height: 240,
                             padding: const EdgeInsets.all(24),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius:
-                              BorderRadius.circular(22),
+                              borderRadius: BorderRadius.circular(22),
                               boxShadow: const [
                                 BoxShadow(
-                                    blurRadius: 10,
-                                    color: Colors.black26,
-                                    offset: Offset(0, 5))
+                                  blurRadius: 10,
+                                  color: Colors.black26,
+                                  offset: Offset(0, 5),
+                                ),
                               ],
                             ),
                             child: Center(
                               child: Transform(
                                 alignment: Alignment.center,
-                                transform: Matrix4.rotationY(
-                                    angle > pi / 2 ? pi : 0),
+                                transform: Matrix4.rotationY(angle > pi / 2 ? pi : 0),
                                 child: Text(
-                                  _showFront
-                                      ? card['question']
-                                      : card['answer'],
+                                  _showFront ? card['question'] : card['answer'],
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
-                                      fontSize: 22,
-                                      fontWeight: FontWeight.w600),
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
                             ),
@@ -617,6 +654,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
                   const SizedBox(height: 40),
 
+                  // Navigation controls
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -624,13 +662,10 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                         icon: const Icon(Icons.arrow_back_ios),
                         onPressed: _prevCard,
                       ),
-
                       Text(
                         "${_currentIndex + 1} of ${_cards.length}",
-                        style: const TextStyle(
-                            fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontWeight: FontWeight.w600),
                       ),
-
                       IconButton(
                         icon: const Icon(Icons.arrow_forward_ios),
                         onPressed: _nextCard,
@@ -642,36 +677,36 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                   const Text("Tap card to flip"),
                   const SizedBox(height: 40),
 
+                  // Quiz button
                   if (_cards.length >= 4)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                    child: SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.quiz),
-                        label: const Text(
-                          "Complete a quiz on this flashcard set",
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          backgroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.quiz),
+                          label: const Text(
+                            "Complete a quiz on this flashcard set",
+                            style: TextStyle(fontWeight: FontWeight.w600),
                           ),
-                        ),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => QuizScreen(setId: widget.setId),
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            backgroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
                             ),
-                          );
-                        },
+                          ),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => QuizScreen(setId: widget.setId),
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
-                  ),
-
 
                   const SizedBox(height: 40),
                 ],

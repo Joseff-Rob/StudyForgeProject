@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:StudyForgeProject/screens/create_flashcard_set_screen.dart';
 import 'package:StudyForgeProject/screens/flashcard_generate_screen.dart';
+import 'package:StudyForgeProject/screens/report_logs_screen.dart';
 import 'package:StudyForgeProject/screens/user_flashcards_screen.dart';
 import 'package:StudyForgeProject/screens/user_lessons_screen.dart';
 import 'package:flutter/material.dart';
@@ -320,30 +321,28 @@ class _MainMenuState extends State<MainMenu> {
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFDCE6F0),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: currentUser != null
+          ? FirebaseFirestore.instance.collection('users').doc(currentUser.uid).snapshots()
+          : null,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+        }
 
-      endDrawer: SizedBox(
-        width: MediaQuery.of(context).size.width * 0.75,
-        child: Drawer(
-          child: SafeArea(
-            child: StreamBuilder<DocumentSnapshot>(
-              stream: currentUser != null
-                  ? FirebaseFirestore.instance
-                  .collection('users')
-                  .doc(currentUser.uid)
-                  .snapshots()
-                  : null,
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
-                }
+        final data = snapshot.data!.data() as Map<String, dynamic>;
+        final username = data['username'] ?? "User";
+        final isAdmin = data['isAdmin'] ?? false;
 
-                final data = snapshot.data!.data() as Map<String, dynamic>;
-                final username = data['username'] ?? "User";
-                final isAdmin = data['isAdmin'] ?? false;
+        return Scaffold(
+          backgroundColor: isAdmin ? const Color(0xFFFFCDD2) : const Color(0xFFDCE6F0),
 
-                return Column(
+          // ---------------- END DRAWER ----------------
+          endDrawer: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.75,
+            child: Drawer(
+              child: SafeArea(
+                child: Column(
                   children: [
                     Container(
                       width: double.infinity,
@@ -365,13 +364,10 @@ class _MainMenuState extends State<MainMenu> {
                       title: const Text("View Profile"),
                       onTap: () {
                         Navigator.pop(context);
-
                         if (currentUser != null) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(
-                              builder: (_) => ProfilePage(userId: currentUser.uid),
-                            ),
+                            MaterialPageRoute(builder: (_) => ProfilePage(userId: currentUser.uid)),
                           );
                         }
                       },
@@ -384,23 +380,23 @@ class _MainMenuState extends State<MainMenu> {
                         Navigator.pop(context);
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const SettingsPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const SettingsPage()),
                         );
                       },
                     ),
 
-                    // ---------------- Admin-only option ----------------
+                    // Admin-only option
                     if (isAdmin)
                       ListTile(
                         leading: const Icon(Icons.report),
                         title: const Text("Report Logs"),
                         onTap: () {
                           Navigator.pop(context);
-                          // For now, just go back to main menu
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Admin Report Logs (placeholder)")),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const ReportLogsScreen(),
+                            ),
                           );
                         },
                       ),
@@ -415,7 +411,6 @@ class _MainMenuState extends State<MainMenu> {
                       ),
                       onTap: () async {
                         Navigator.pop(context);
-
                         final confirm = await showDialog<bool>(
                           context: context,
                           builder: (context) => AlertDialog(
@@ -436,7 +431,6 @@ class _MainMenuState extends State<MainMenu> {
                             ],
                           ),
                         );
-
                         if (confirm == true) {
                           await FirebaseAuth.instance.signOut();
                         }
@@ -445,71 +439,65 @@ class _MainMenuState extends State<MainMenu> {
 
                     const SizedBox(height: 16),
                   ],
-                );
-              },
-            ),
-          ),
-        ),
-      ),
-
-      appBar: AppBar(
-        backgroundColor: Colors.blueGrey,
-        title: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: TextField(
-            controller: _searchController,
-            focusNode: _searchFocusNode,
-            decoration: InputDecoration(
-              hintText: "Search users or flashcard sets...",
-              filled: true,
-              fillColor: Colors.white,
-              prefixIcon: const Icon(Icons.search),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
-              ),
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 14,
-                vertical: 10,
+                ),
               ),
             ),
           ),
-        ),
-        actions: [
-          Builder(
-            builder: (context) => IconButton(
-              icon: const Icon(Icons.menu),
-              onPressed: () =>
-                  Scaffold.of(context).openEndDrawer(),
+
+          // ---------------- APPBAR ----------------
+          appBar: AppBar(
+            backgroundColor: isAdmin ? Colors.red.shade700 : Colors.blueGrey,
+            title: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                decoration: InputDecoration(
+                  hintText: "Search users or flashcard sets...",
+                  filled: true,
+                  fillColor: Colors.white,
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                ),
+              ),
             ),
+            actions: [
+              Builder(
+                builder: (context) => IconButton(
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => Scaffold.of(context).openEndDrawer(),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
 
-      body: Stack(
-        children: [
-          // Main Welcome Content
-          StreamBuilder<DocumentSnapshot>(
-            stream: currentUser != null
-                ? FirebaseFirestore.instance
-                .collection('users')
-                .doc(currentUser.uid)
-                .snapshots()
-                : null,
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(
-                    child: CircularProgressIndicator());
-              }
-
-              final data =
-              snapshot.data!.data() as Map<String, dynamic>;
-              final username = data['username'] ?? "User";
-
-              return Center(
+          // ---------------- BODY ----------------
+          body: Stack(
+            children: [
+              Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    if (isAdmin)
+                      Container(
+                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.red.shade700,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          "ADMIN",
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 10),
                     Text(
                       "Welcome, $username 👋",
                       style: const TextStyle(
@@ -524,142 +512,108 @@ class _MainMenuState extends State<MainMenu> {
                     ),
                   ],
                 ),
-              );
-            },
-          ),
+              ),
 
-          // ---------------- SEARCH RESULTS ----------------
-
-          if (_userResults.isNotEmpty ||
-              _flashcardSetResults.isNotEmpty ||
-              _searchController.text.isNotEmpty)
-            Positioned(
-              top: 10,
-              left: 16,
-              right: 16,
-              child: Material(
-                elevation: 8,
-                borderRadius: BorderRadius.circular(16),
-                child: Container(
-                  constraints:
-                  const BoxConstraints(maxHeight: 350),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
+              // ---------------- SEARCH RESULTS ----------------
+              if (_userResults.isNotEmpty || _flashcardSetResults.isNotEmpty || _searchController.text.isNotEmpty)
+                Positioned(
+                  top: 10,
+                  left: 16,
+                  right: 16,
+                  child: Material(
+                    elevation: 8,
                     borderRadius: BorderRadius.circular(16),
-                  ),
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
-                      children: [
-
-                        const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Text(
-                            "Users",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-
-                        if (_userResults.isEmpty)
-                          const Padding(
-                            padding:
-                            EdgeInsets.symmetric(horizontal: 16),
-                            child: Text("No users found"),
-                          ),
-
-                        ..._userResults.map((user) {
-                          return ListTile(
-                            leading: const Icon(Icons.person),
-                            title: Text(user['name']),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) => ProfilePage(
-                                      userId: user['id']),
-                                ),
-                              );
-                              _clearSearch();
-                            },
-                          );
-                        }),
-
-                        const Divider(),
-
-                        const Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Text(
-                            "Flashcard Sets",
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-
-                        if (_flashcardSetResults.isEmpty)
-                          const Padding(
-                            padding:
-                            EdgeInsets.symmetric(horizontal: 16),
-                            child: Text("No flashcard sets found"),
-                          ),
-
-                        ..._flashcardSetResults.map((set) {
-                          return ListTile(
-                            leading: const Icon(Icons.style),
-                              title: Text(
-                                "${set['name']} | "
-                                "${set['cards']} cards | by "
-                                "${set['ownerName']}",
+                    child: Container(
+                      constraints: const BoxConstraints(maxHeight: 350),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Text(
+                                "Users",
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                               ),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (_) =>
-                                      ViewFlashcardsScreen(
+                            ),
+                            if (_userResults.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                child: Text("No users found"),
+                              ),
+                            ..._userResults.map((user) {
+                              return ListTile(
+                                leading: const Icon(Icons.person),
+                                title: Text(user['name']),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => ProfilePage(userId: user['id'])),
+                                  );
+                                  _clearSearch();
+                                },
+                              );
+                            }),
+                            const Divider(),
+                            const Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Text(
+                                "Flashcard Sets",
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                              ),
+                            ),
+                            if (_flashcardSetResults.isEmpty)
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                child: Text("No flashcard sets found"),
+                              ),
+                            ..._flashcardSetResults.map((set) {
+                              return ListTile(
+                                leading: const Icon(Icons.style),
+                                title: Text("${set['name']} | ${set['cards']} cards | by ${set['ownerName']}"),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => ViewFlashcardsScreen(
                                         setId: set['id'],
                                         setTitle: set['name'],
                                       ),
-                                ),
+                                    ),
+                                  );
+                                  _clearSearch();
+                                },
                               );
-                              _clearSearch();
-                            },
-                          );
-                        }),
-                      ],
+                            }),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            ),
-        ],
-      ),
+            ],
+          ),
 
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        items: const [
-          BottomNavigationBarItem(
-              icon: Icon(Icons.school), label: "Teach"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.style), label: "Flashcards"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.add_circle_outline),
-              label: "Coming"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.picture_as_pdf), label: "Generate Cards"),
-          BottomNavigationBarItem(
-              icon: Icon(Icons.person_outline),
-              label: "Profile"),
-        ],
-      ),
+          // ---------------- BOTTOM NAV ----------------
+          bottomNavigationBar: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _onItemTapped,
+            type: BottomNavigationBarType.fixed,
+            items: const [
+              BottomNavigationBarItem(icon: Icon(Icons.school), label: "Teach"),
+              BottomNavigationBarItem(icon: Icon(Icons.style), label: "Flashcards"),
+              BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: "Coming"),
+              BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: "Generate Cards"),
+              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Profile"),
+            ],
+          ),
+        );
+      },
     );
   }
 }
