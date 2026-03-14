@@ -1,9 +1,13 @@
 import 'dart:math';
+import 'dart:typed_data' show Uint8List;
 
+import 'package:StudyForgeProject/consts.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/quiz_question.dart';
+import 'flashcard_generator_service.dart';
+
 
 class FlashcardService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -17,6 +21,7 @@ class FlashcardService {
 
     final docRef = await _firestore.collection('flashcard_sets').add({
       'title': title,
+      'titleLowercase': title.toLowerCase(),
       'ownerId': user.uid,
       'isPublic': isPublic,
       'flashcardCount': 0,
@@ -241,5 +246,82 @@ class FlashcardService {
       );
     }
     return quiz;
+  }
+
+  // final OcrService _ocrService = OcrService();
+  //
+  // Future<void> importPdfAsFlashcards({
+  //   required Uint8List pdfBytes,
+  //   required String setTitle,
+  //   String? filePath,
+  //   required String apiKey,
+  //   bool isPublic = false,
+  // }) async {
+  //   // 1️⃣ Extract text from PDF
+  //   final text = await _ocrService.extractTextFromPdf(
+  //     pdfBytes: pdfBytes,
+  //     filePath: filePath,
+  //   );
+  //
+  //   if (text.isEmpty) {
+  //     throw Exception("No text extracted from PDF");
+  //   }
+  //
+  //   // 2️⃣ Generate flashcards using Gemini
+  //   final generator = FlashcardGeneratorService(geminiApiKey: GEMINI_API_KEY);
+  //
+  //   // Truncate if text too long for API
+  //   final truncatedText = text.length > 12000 ? text.substring(0, 12000) : text;
+  //
+  //   final flashcards = await generator.generateFlashcards(truncatedText);
+  //
+  //   if (flashcards.isEmpty) {
+  //     throw Exception("AI did not return any flashcards");
+  //   }
+  //
+  //   // 3️⃣ Create flashcard set with title & public flag
+  //   final setId = await createFlashcardSet(title: setTitle, isPublic: isPublic);
+  //
+  //   // 4️⃣ Add flashcards to Firestore
+  //   for (final card in flashcards) {
+  //     final question = card["question"]?.trim();
+  //     final answer = card["answer"]?.trim();
+  //
+  //     if (question != null && answer != null && question.isNotEmpty && answer.isNotEmpty) {
+  //       await addFlashcard(setId: setId, question: question, answer: answer);
+  //     }
+  //   }
+  // }
+
+  Future<void> importTextAsFlashcards({
+    required String rawText,
+    required String setTitle,
+    required String apiKey,
+    bool isPublic = false,
+  }) async {
+
+    final generator = FlashcardGeneratorService(geminiApiKey: GEMINI_API_KEY);
+
+    final truncatedText =
+    rawText.length > 12000 ? rawText.substring(0, 12000) : rawText;
+
+    final flashcards = await generator.generateFlashcards(truncatedText);
+
+    if (flashcards.isEmpty) {
+      throw Exception("No flashcards generated");
+    }
+
+    final setId = await createFlashcardSet(
+      title: setTitle,
+      isPublic: isPublic,
+    );
+
+    for (final card in flashcards) {
+      await addFlashcard(
+        setId: setId,
+        question: card["question"]!,
+        answer: card["answer"]!,
+      );
+    }
   }
 }

@@ -140,9 +140,10 @@ class _QuizScreenState extends State<QuizScreen>
       appBar: AppBar(
         title: const Text("Flashcard Quiz"),
       ),
-      body: Padding(
-        padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 70),
-        child: Column(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 70),
+          child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
 
@@ -232,7 +233,7 @@ class _QuizScreenState extends State<QuizScreen>
               );
             }),
 
-            const Spacer(),
+            const SizedBox(height: 20),
 
             /// Next button
             if (_answered)
@@ -247,7 +248,8 @@ class _QuizScreenState extends State<QuizScreen>
                   ),
                 ),
               )
-          ],
+            ],
+          ),
         ),
       ),
     );

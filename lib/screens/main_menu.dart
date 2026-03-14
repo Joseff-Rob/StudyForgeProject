@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:StudyForgeProject/screens/create_flashcard_set_screen.dart';
+import 'package:StudyForgeProject/screens/pdf_flashcard_screen.dart';
 import 'package:StudyForgeProject/screens/user_flashcards_screen.dart';
 import 'package:StudyForgeProject/screens/user_lessons_screen.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +13,7 @@ import 'profile_page.dart';
 import 'teach_to_learn_ai.dart';
 import 'settings.dart';
 import 'view_flashcards_screen.dart';
+import '../consts.dart';
 
 class MainMenu extends StatefulWidget {
   const MainMenu({super.key});
@@ -89,12 +91,16 @@ class _MainMenuState extends State<MainMenu> {
       // ---------------- FLASHCARD SET SEARCH ----------------
       final setSnapshot = await FirebaseFirestore.instance
           .collection('flashcard_sets')
+          .where('isPublic', isEqualTo: true)
           .where('titleLowercase',
           isGreaterThanOrEqualTo: lowerQuery)
           .where('titleLowercase',
           isLessThanOrEqualTo: lowerQuery + '\uf8ff')
           .limit(5)
           .get();
+
+
+      debugPrint("Found sets: ${setSnapshot.docs.length}");
 
       // Collect owner IDs
       final ownerIds = setSnapshot.docs
@@ -258,6 +264,31 @@ class _MainMenuState extends State<MainMenu> {
                       ),
                     );
                   }
+                },
+              ),
+            ],
+          ),
+        ),
+      );
+    } else if (index == 3) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => Padding(
+          padding: const EdgeInsets.only(bottom: 70),
+          child: Wrap(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.picture_as_pdf),
+                title: const Text("Generate Cards"),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => PdfFlashcardScreen()
+                    ),
+                  );
                 },
               ),
             ],
@@ -596,7 +627,7 @@ class _MainMenuState extends State<MainMenu> {
               icon: Icon(Icons.add_circle_outline),
               label: "Coming"),
           BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart), label: "Coming"),
+              icon: Icon(Icons.picture_as_pdf), label: "Generate Cards"),
           BottomNavigationBarItem(
               icon: Icon(Icons.person_outline),
               label: "Profile"),

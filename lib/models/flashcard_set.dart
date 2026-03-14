@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class FlashcardSet {
   final String id;
   final String title;
+  final String titleLowercase;
   final String ownerId;
   final bool isPublic;
   final int flashcardCount;
@@ -12,6 +13,7 @@ class FlashcardSet {
   FlashcardSet({
     required this.id,
     required this.title,
+    required this.titleLowercase,
     required this.ownerId,
     required this.isPublic,
     required this.flashcardCount,
