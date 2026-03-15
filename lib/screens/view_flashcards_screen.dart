@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:StudyForgeProject/screens/profile_page.dart';
 import 'package:StudyForgeProject/screens/quiz_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -432,8 +433,9 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
               final reason = reportController.text.trim();
               if (reason.isNotEmpty) {
                 await FirebaseFirestore.instance.collection('reports').add({
-                  'setId': widget.setId,
-                  'setTitle': widget.setTitle,
+                  'targetType': 'set',
+                  'targetId': widget.setId,
+                  'targetTitle': widget.setTitle,
                   'reportedBy': FirebaseAuth.instance.currentUser?.uid,
                   'reason': reason,
                   'timestamp': FieldValue.serverTimestamp(),
@@ -533,7 +535,50 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
           backgroundColor: const Color(0xFFDCE6F0),
           appBar: AppBar(
             backgroundColor: Colors.blueGrey,
-            title: Text(liveTitle),
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(liveTitle),
+                FutureBuilder<DocumentSnapshot>(
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(data['ownerId'])
+                      .get(),
+                  builder: (context, ownerSnapshot) {
+                    if (!ownerSnapshot.hasData) {
+                      return const Text(
+                        "Loading owner...",
+                        style: TextStyle(fontSize: 12),
+                      );
+                    }
+
+                    final ownerData =
+                    ownerSnapshot.data!.data() as Map<String, dynamic>;
+
+                    final username = ownerData['username'] ?? "Unknown";
+
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProfilePage(userId: data['ownerId']),
+                          ),
+                        );
+                      },
+                      child: Text(
+                        "by $username (click for more info)",
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.white,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.report, color: Colors.red),

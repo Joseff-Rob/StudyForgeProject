@@ -1,3 +1,4 @@
+import 'package:StudyForgeProject/screens/profile_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -36,6 +37,12 @@ class _ReportLogsScreenState extends State<ReportLogsScreen> {
     });
   }
 
+  List<Report> get _setReports =>
+      _reports.where((r) => r.targetType == "set").toList();
+
+  List<Report> get _userReports =>
+      _reports.where((r) => r.targetType == "user").toList();
+
   Future<void> _resolveReport(Report report) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -43,8 +50,12 @@ class _ReportLogsScreenState extends State<ReportLogsScreen> {
         title: const Text("Resolve Report"),
         content: const Text("Are you sure you want to mark this report as resolved?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
-          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text("Resolve")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text("Resolve")),
         ],
       ),
     );
@@ -72,7 +83,9 @@ class _ReportLogsScreenState extends State<ReportLogsScreen> {
         title: const Text("Delete Set"),
         content: const Text("Are you sure you want to delete this flashcard set?"),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel")),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             child: const Text("Delete", style: TextStyle(color: Colors.red)),
@@ -83,7 +96,11 @@ class _ReportLogsScreenState extends State<ReportLogsScreen> {
 
     if (confirm != true) return;
 
-    await FirebaseFirestore.instance.collection('flashcard_sets').doc(report.setId).delete();
+    await FirebaseFirestore.instance
+        .collection('flashcard_sets')
+        .doc(report.targetId)
+        .delete();
+
     await FirebaseFirestore.instance.collection('reports').doc(report.id).delete();
 
     setState(() {
@@ -98,52 +115,107 @@ class _ReportLogsScreenState extends State<ReportLogsScreen> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Report Logs"),
-        backgroundColor: Colors.redAccent,
+  Future<void> _deleteUser(Report report) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete User"),
+        content: const Text(
+            "Are you sure you want to delete this user and all their flashcard sets?"),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text("Cancel")),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete", style: TextStyle(color: Colors.red)),
+          ),
+        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _reports.isEmpty
-          ? const Center(
+    );
+
+    if (confirm != true) return;
+
+    final firestore = FirebaseFirestore.instance;
+
+    try {
+      // Find all sets by the user
+      final sets = await firestore
+          .collection('flashcard_sets')
+          .where('ownerId', isEqualTo: report.targetId)
+          .get();
+
+      // Delete all sets
+      for (final doc in sets.docs) {
+        await doc.reference.delete();
+      }
+
+      // Delete the user document
+      await firestore.collection('users').doc(report.targetId).delete();
+
+      // Delete the report
+      await firestore.collection('reports').doc(report.id).delete();
+
+      setState(() {
+        _reports.remove(report);
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("User and their flashcard sets deleted"),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error deleting user: $e")),
+      );
+    }
+  }
+
+  Widget _buildReportList(List<Report> reports, {required bool isUserReport}) {
+    if (reports.isEmpty) {
+      return const Center(
         child: Text(
           "No reports to review.",
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
         ),
-      )
-          : ListView.builder(
-        itemCount: _reports.length,
-        itemBuilder: (context, index) {
-          final report = _reports[index];
+      );
+    }
 
-          return Card(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            elevation: 3,
-            child: ListTile(
-              title: Text(report.setTitle),
-              subtitle: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 4),
-                  Text("Reason: ${report.reason}"),
-                  const SizedBox(height: 2),
-                  Text(
-                    "Reported by: ${report.reportedBy}",
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                  Text(
-                    "Time: ${DateFormat.yMd().add_jm().format(report.timestamp)}",
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
-                ],
-              ),
-              isThreeLine: true,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
+    return ListView.builder(
+      itemCount: reports.length,
+      itemBuilder: (context, index) {
+        final report = reports[index];
+
+        return Card(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          elevation: 3,
+          child: ListTile(
+            title: Text(report.targetTitle),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 4),
+                Text("Reason: ${report.reason}"),
+                const SizedBox(height: 2),
+                Text(
+                  "Reported by: ${report.reportedBy}",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+                Text(
+                  "Time: ${DateFormat.yMd().add_jm().format(report.timestamp)}",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+            isThreeLine: true,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+
+                // VIEW SET
+                if (!isUserReport)
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey,
@@ -155,22 +227,46 @@ class _ReportLogsScreenState extends State<ReportLogsScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (_) => ViewFlashcardsScreen(
-                            setId: report.setId,
-                            setTitle: report.setTitle,
+                            setId: report.targetId,
+                            setTitle: report.targetTitle,
                           ),
                         ),
                       );
                     },
                   ),
-                  const SizedBox(width: 6),
+
+                // VIEW USER
+                if (isUserReport)
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green,
+                      backgroundColor: Colors.grey,
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                     ),
-                    child: const Text("Resolve"),
-                    onPressed: () => _resolveReport(report),
+                    child: const Text("View Account"),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ProfilePage(userId: report.targetId),
+                        ),
+                      );
+                    },
                   ),
+
+                const SizedBox(width: 6),
+
+                // RESOLVE
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  ),
+                  child: const Text("Resolve"),
+                  onPressed: () => _resolveReport(report),
+                ),
+
+                // DELETE SET
+                if (!isUserReport) ...[
                   const SizedBox(width: 6),
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
@@ -181,10 +277,50 @@ class _ReportLogsScreenState extends State<ReportLogsScreen> {
                     onPressed: () => _deleteSet(report),
                   ),
                 ],
-              ),
+
+                // DELETE USER
+                if (isUserReport) ...[
+                  const SizedBox(width: 6),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    ),
+                    child: const Text("Delete User"),
+                    onPressed: () => _deleteUser(report),
+                  ),
+                ],
+              ],
             ),
-          );
-        },
+          ),
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text("Report Logs"),
+          backgroundColor: Colors.redAccent,
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: "Set Reports"),
+              Tab(text: "User Reports"),
+            ],
+          ),
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : TabBarView(
+          children: [
+            _buildReportList(_setReports, isUserReport: false),
+            _buildReportList(_userReports, isUserReport: true),
+          ],
+        ),
       ),
     );
   }

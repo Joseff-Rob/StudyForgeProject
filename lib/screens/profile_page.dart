@@ -4,9 +4,118 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ProfilePage extends StatelessWidget {
-  final String? userId; // If null → current user; otherwise → view another user
+  final String? userId;
 
   const ProfilePage({super.key, this.userId});
+
+  // ----------------------------
+  // REPORT USER
+  // ----------------------------
+  Future<void> _reportUser(
+      BuildContext context, String userId, String username) async {
+    final controller = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Report User"),
+        content: TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            labelText: "Reason for reporting",
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () async {
+              final reason = controller.text.trim();
+              if (reason.isEmpty) return;
+
+              await FirebaseFirestore.instance.collection('reports').add({
+                'targetType': 'user',
+                'targetId': userId,
+                'targetTitle': username,
+                'reportedBy': FirebaseAuth.instance.currentUser?.uid,
+                'reason': reason,
+                'timestamp': FieldValue.serverTimestamp(),
+              });
+
+              Navigator.pop(context);
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("User reported")),
+              );
+            },
+            child: const Text("Submit"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ----------------------------
+  // DELETE ACCOUNT
+  // ----------------------------
+  Future<void> _deleteAccount(
+      BuildContext context, String uid) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Delete Account"),
+        content: const Text(
+            "Are you sure you want to delete this account? "
+                "This action will remove all flashcard sets and cannot be undone."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text("Cancel"),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text("Delete"),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    // Delete all flashcard sets by this user
+    final setsSnapshot = await FirebaseFirestore.instance
+        .collection('flashcard_sets')
+        .where('ownerId', isEqualTo: uid)
+        .get();
+
+    for (final doc in setsSnapshot.docs) {
+      await FirebaseFirestore.instance
+          .collection('flashcard_sets')
+          .doc(doc.id)
+          .delete();
+    }
+
+    // Delete the user document
+    await FirebaseFirestore.instance.collection('users').doc(uid).delete();
+
+    // If current user deletes their own account, delete Firebase Auth account
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null && currentUser.uid == uid) {
+      await currentUser.delete();
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Account deleted")),
+    );
+
+    Navigator.pop(context); // go back after deletion
+  }
 
   // ----------------------------
   // EDIT USERNAME
@@ -149,6 +258,31 @@ class ProfilePage extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text(isCurrentUser ? "Your Profile" : "User Profile"),
+        actions: [
+          // Delete Account button (only for owner or admin)
+          FutureBuilder<DocumentSnapshot>(
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .doc(currentUser?.uid)
+                .get(),
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) return const SizedBox.shrink();
+              final currentData =
+                  snapshot.data!.data() as Map<String, dynamic>? ?? {};
+              final isAdmin = currentData['isAdmin'] ?? false;
+
+              if (isCurrentUser || isAdmin) {
+                return IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red),
+                  tooltip: "Delete Account",
+                  onPressed: () => _deleteAccount(context, uidToShow),
+                );
+              }
+
+              return const SizedBox.shrink();
+            },
+          ),
+        ],
       ),
       body: Center(
         child: StreamBuilder<DocumentSnapshot>(
@@ -175,18 +309,17 @@ class ProfilePage extends StatelessWidget {
                 const Icon(Icons.person, size: 80, color: Colors.blueGrey),
                 const SizedBox(height: 20),
 
-                // Username
                 const Text(
                   "Username:",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(username, style: const TextStyle(fontSize: 20)),
-                    if (isCurrentUser)
-                      const SizedBox(width: 8),
+                    if (isCurrentUser) const SizedBox(width: 8),
                     if (isCurrentUser)
                       IconButton(
                         icon: const Icon(Icons.edit),
@@ -198,12 +331,12 @@ class ProfilePage extends StatelessWidget {
 
                 const SizedBox(height: 28),
 
-                // Email
                 const Text(
                   "Email:",
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
+
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -216,6 +349,9 @@ class ProfilePage extends StatelessWidget {
                       ),
                   ],
                 ),
+
+                const SizedBox(height: 30),
+
                 ElevatedButton(
                   onPressed: () {
                     Navigator.push(
@@ -230,6 +366,20 @@ class ProfilePage extends StatelessWidget {
                   },
                   child: const Text("View Flashcards"),
                 ),
+
+                // REPORT USER BUTTON
+                if (!isCurrentUser) ...[
+                  const SizedBox(height: 20),
+                  ElevatedButton.icon(
+                    icon: const Icon(Icons.report),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                    ),
+                    label: const Text("Report User"),
+                    onPressed: () =>
+                        _reportUser(context, uidToShow, username),
+                  ),
+                ],
               ],
             );
           },
