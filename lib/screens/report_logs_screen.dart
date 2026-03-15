@@ -191,105 +191,77 @@ class _ReportLogsScreenState extends State<ReportLogsScreen> {
         return Card(
           margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           elevation: 3,
-          child: ListTile(
-            title: Text(report.targetTitle),
-            subtitle: Column(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 4),
+
+                // TITLE
+                Text(report.targetTitle, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+
+                const SizedBox(height: 6),
+
+                // REASON & REPORT INFO
                 Text("Reason: ${report.reason}"),
-                const SizedBox(height: 2),
-                Text(
-                  "Reported by: ${report.reportedBy}",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                const SizedBox(height: 4),
+                Text("Reported by: ${report.reportedBy}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                Text("Time: ${DateFormat.yMd().add_jm().format(report.timestamp)}", style: const TextStyle(fontSize: 12, color: Colors.grey)),
+
+                const SizedBox(height: 12),
+
+                // BUTTONS (stacked vertically)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+
+                    if (!isUserReport)
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, padding: const EdgeInsets.symmetric(vertical: 8)),
+                        child: const Text("Go to Set"),
+                        onPressed: () {
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => ViewFlashcardsScreen(setId: report.targetId, setTitle: report.targetTitle),
+                          ));
+                        },
+                      ),
+
+                    if (isUserReport)
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.grey, padding: const EdgeInsets.symmetric(vertical: 8)),
+                        child: const Text("View Account"),
+                        onPressed: () {
+                          Navigator.push(context, MaterialPageRoute(
+                            builder: (_) => ProfilePage(userId: report.targetId),
+                          ));
+                        },
+                      ),
+
+                    const SizedBox(height: 6),
+
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.green, padding: const EdgeInsets.symmetric(vertical: 8)),
+                      child: const Text("Resolve"),
+                      onPressed: () => _resolveReport(report),
+                    ),
+
+                    const SizedBox(height: 6),
+
+                    if (!isUserReport)
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(vertical: 8)),
+                        child: const Text("Delete Set"),
+                        onPressed: () => _deleteSet(report),
+                      ),
+
+                    if (isUserReport)
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(backgroundColor: Colors.red, padding: const EdgeInsets.symmetric(vertical: 8)),
+                        child: const Text("Delete User"),
+                        onPressed: () => _deleteUser(report),
+                      ),
+                  ],
                 ),
-                Text(
-                  "Time: ${DateFormat.yMd().add_jm().format(report.timestamp)}",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey),
-                ),
-              ],
-            ),
-            isThreeLine: true,
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-
-                // VIEW SET
-                if (!isUserReport)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    child: const Text("Go to Set"),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ViewFlashcardsScreen(
-                            setId: report.targetId,
-                            setTitle: report.targetTitle,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                // VIEW USER
-                if (isUserReport)
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    child: const Text("View Account"),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ProfilePage(userId: report.targetId),
-                        ),
-                      );
-                    },
-                  ),
-
-                const SizedBox(width: 6),
-
-                // RESOLVE
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  ),
-                  child: const Text("Resolve"),
-                  onPressed: () => _resolveReport(report),
-                ),
-
-                // DELETE SET
-                if (!isUserReport) ...[
-                  const SizedBox(width: 6),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    child: const Text("Delete Set"),
-                    onPressed: () => _deleteSet(report),
-                  ),
-                ],
-
-                // DELETE USER
-                if (isUserReport) ...[
-                  const SizedBox(width: 6),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    ),
-                    child: const Text("Delete User"),
-                    onPressed: () => _deleteUser(report),
-                  ),
-                ],
               ],
             ),
           ),

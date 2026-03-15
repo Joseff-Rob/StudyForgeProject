@@ -284,105 +284,100 @@ class ProfilePage extends StatelessWidget {
           ),
         ],
       ),
-      body: Center(
-        child: StreamBuilder<DocumentSnapshot>(
-          stream: FirebaseFirestore.instance
-              .collection('users')
-              .doc(uidToShow)
-              .snapshots(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const CircularProgressIndicator();
-            }
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: StreamBuilder<DocumentSnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('users')
+                .doc(uidToShow)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-            if (!snapshot.hasData || !snapshot.data!.exists) {
-              return const Text("Profile data not found.");
-            }
+              if (!snapshot.hasData || !snapshot.data!.exists) {
+                return const Center(child: Text("Profile data not found."));
+              }
 
-            final data = snapshot.data!.data() as Map<String, dynamic>;
-            final username = data['username'] ?? 'Unknown';
-            final email = data['email'] ?? 'No email';
+              final data = snapshot.data!.data() as Map<String, dynamic>;
+              final username = data['username'] ?? 'Unknown';
+              final email = data['email'] ?? 'No email';
+              final isCurrentUser = uidToShow == FirebaseAuth.instance.currentUser?.uid;
 
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.person, size: 80, color: Colors.blueGrey),
-                const SizedBox(height: 20),
-
-                const Text(
-                  "Username:",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(username, style: const TextStyle(fontSize: 20)),
-                    if (isCurrentUser) const SizedBox(width: 8),
-                    if (isCurrentUser)
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () =>
-                            _editUsername(context, uidToShow, username),
-                      ),
-                  ],
-                ),
-
-                const SizedBox(height: 28),
-
-                const Text(
-                  "Email:",
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(email, style: const TextStyle(fontSize: 16)),
-                    if (isCurrentUser) const SizedBox(width: 8),
-                    if (isCurrentUser)
-                      IconButton(
-                        icon: const Icon(Icons.edit),
-                        onPressed: () => _editEmail(context, uidToShow, email),
-                      ),
-                  ],
-                ),
-
-                const SizedBox(height: 30),
-
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => PublicUserFlashcardSetsScreen(
-                          userId: uidToShow,
-                          username: username,
-                        ),
-                      ),
-                    );
-                  },
-                  child: const Text("View Flashcards"),
-                ),
-
-                // REPORT USER BUTTON
-                if (!isCurrentUser) ...[
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Icon(Icons.person, size: 80, color: Colors.blueGrey),
                   const SizedBox(height: 20),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.report),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                    ),
-                    label: const Text("Report User"),
-                    onPressed: () =>
-                        _reportUser(context, uidToShow, username),
+
+                  const Text(
+                    "Username:",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(username, style: const TextStyle(fontSize: 20)),
+                      if (isCurrentUser) const SizedBox(width: 8),
+                      if (isCurrentUser)
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _editUsername(context, uidToShow, username),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 28),
+                  const Text(
+                    "Email:",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(email, style: const TextStyle(fontSize: 16)),
+                      if (isCurrentUser) const SizedBox(width: 8),
+                      if (isCurrentUser)
+                        IconButton(
+                          icon: const Icon(Icons.edit),
+                          onPressed: () => _editEmail(context, uidToShow, email),
+                        ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 30),
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PublicUserFlashcardSetsScreen(
+                            userId: uidToShow,
+                            username: username,
+                          ),
+                        ),
+                      );
+                    },
+                    child: const Text("View Flashcards"),
+                  ),
+
+                  if (!isCurrentUser) ...[
+                    const SizedBox(height: 20),
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.report),
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                      label: const Text("Report User"),
+                      onPressed: () => _reportUser(context, uidToShow, username),
+                    ),
+                  ],
                 ],
-              ],
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );
