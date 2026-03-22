@@ -232,11 +232,24 @@ class _MainMenuState extends State<MainMenu> {
                   );
                 },
               ),
+              ListTile(
+                leading: const Icon(Icons.text_snippet),
+                title: const Text("Generate Cards"),
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => FlashcardGenerateScreen()
+                    ),
+                  );
+                },
+              ),
             ],
           ),
         ),
       );
-    } else if (index == 4) {
+    } else if (index == 2) {
       showModalBottomSheet(
         context: context,
         isScrollControlled: true,
@@ -268,50 +281,7 @@ class _MainMenuState extends State<MainMenu> {
           ),
         ),
       );
-    } else if (index == 3) {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        builder: (context) => Padding(
-          padding: const EdgeInsets.only(bottom: 70),
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.picture_as_pdf),
-                title: const Text("Generate Cards"),
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => FlashcardGenerateScreen()
-                    ),
-                  );
-                },
-              ),
-            ],
-          ),
-        ),
-      );
-    } else {
-      showModalBottomSheet(
-        context: context,
-        isScrollControlled: true,
-        builder: (context) => Padding(
-          padding: const EdgeInsets.only(bottom: 70),
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: const Icon(Icons.question_mark),
-                title: const Text("Coming soon"),
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        ),
-      );
     }
-
     setState(() => _selectedIndex = index);
   }
 
@@ -607,8 +577,6 @@ class _MainMenuState extends State<MainMenu> {
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.school), label: "Teach"),
               BottomNavigationBarItem(icon: Icon(Icons.style), label: "Flashcards"),
-              BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: "Coming"),
-              BottomNavigationBarItem(icon: Icon(Icons.picture_as_pdf), label: "Generate Cards"),
               BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Profile"),
             ],
           ),

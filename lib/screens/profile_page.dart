@@ -239,6 +239,59 @@ class ProfilePage extends StatelessWidget {
     return query.docs.any((doc) => doc.id != currentUid);
   }
 
+  Widget _buildInfoCard({
+    required String title,
+    required String value,
+    required bool isEditable,
+    required VoidCallback onEdit,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: Colors.grey,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          if (isEditable)
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: onEdit,
+            ),
+        ],
+      ),
+    );
+  }
+
   // ----------------------------
   // UI
   // ----------------------------
@@ -256,10 +309,11 @@ class ProfilePage extends StatelessWidget {
     final isCurrentUser = uidToShow == currentUser?.uid;
 
     return Scaffold(
+      backgroundColor: const Color(0xFFDCE6F0),
       appBar: AppBar(
+        backgroundColor: Colors.blueGrey,
         title: Text(isCurrentUser ? "Your Profile" : "User Profile"),
         actions: [
-          // Delete Account button (only for owner or admin)
           FutureBuilder<DocumentSnapshot>(
             future: FirebaseFirestore.instance
                 .collection('users')
@@ -278,7 +332,6 @@ class ProfilePage extends StatelessWidget {
                   onPressed: () => _deleteAccount(context, uidToShow),
                 );
               }
-
               return const SizedBox.shrink();
             },
           ),
@@ -304,74 +357,124 @@ class ProfilePage extends StatelessWidget {
               final data = snapshot.data!.data() as Map<String, dynamic>;
               final username = data['username'] ?? 'Unknown';
               final email = data['email'] ?? 'No email';
-              final isCurrentUser = uidToShow == FirebaseAuth.instance.currentUser?.uid;
+              final isAdmin = data['isAdmin'] ?? false;
+              final isCurrentUser =
+                  uidToShow == FirebaseAuth.instance.currentUser?.uid;
 
               return Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Icon(Icons.person, size: 80, color: Colors.blueGrey),
-                  const SizedBox(height: 20),
-
-                  const Text(
-                    "Username:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(username, style: const TextStyle(fontSize: 20)),
-                      if (isCurrentUser) const SizedBox(width: 8),
-                      if (isCurrentUser)
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _editUsername(context, uidToShow, username),
+                  // ---------------- PROFILE HEADER ----------------
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: Colors.blueGrey,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Column(
+                      children: [
+                        const CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Colors.white,
+                          child: Icon(Icons.person, size: 40, color: Colors.blueGrey),
                         ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 28),
-                  const Text(
-                    "Email:",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(email, style: const TextStyle(fontSize: 16)),
-                      if (isCurrentUser) const SizedBox(width: 8),
-                      if (isCurrentUser)
-                        IconButton(
-                          icon: const Icon(Icons.edit),
-                          onPressed: () => _editEmail(context, uidToShow, email),
-                        ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 30),
-                  ElevatedButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PublicUserFlashcardSetsScreen(
-                            userId: uidToShow,
-                            username: username,
+                        const SizedBox(height: 12),
+                        Text(
+                          username,
+                          style: const TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
                           ),
                         ),
-                      );
-                    },
-                    child: const Text("View Flashcards"),
+                        if (isAdmin) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.red.shade700,
+                                borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: const Text(
+                              "ADMIN",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ---------------- USER INFO CARD ----------------
+                  _buildInfoCard(
+                    title: "Username",
+                    value: username,
+                    isEditable: isCurrentUser,
+                    onEdit: () =>
+                        _editUsername(context, uidToShow, username),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  _buildInfoCard(
+                    title: "Email",
+                    value: email,
+                    isEditable: isCurrentUser,
+                    onEdit: () =>
+                        _editEmail(context, uidToShow, email),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ---------------- ACTION BUTTONS ----------------
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.style),
+                      label: const Text("View Flashcards"),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => PublicUserFlashcardSetsScreen(
+                              userId: uidToShow,
+                              username: username,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
 
                   if (!isCurrentUser) ...[
-                    const SizedBox(height: 20),
-                    ElevatedButton.icon(
-                      icon: const Icon(Icons.report),
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                      label: const Text("Report User"),
-                      onPressed: () => _reportUser(context, uidToShow, username),
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.report),
+                        label: const Text("Report User"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () =>
+                            _reportUser(context, uidToShow, username),
+                      ),
                     ),
                   ],
                 ],

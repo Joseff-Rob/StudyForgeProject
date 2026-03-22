@@ -221,7 +221,6 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
       _typingUser.add(_geminiUser);
     });
 
-    // Do NOT block UI waiting for API response
     Future.microtask(() async {
 
       try {
@@ -231,14 +230,25 @@ You are participating in a Teach-To-Learn session.
 
 The student will teach YOU the topic: "$topic".
 
-Your role:
-- Act like a curious beginner who knows nothing.
-- Ask the student to explain the topic in their own words.
-- Ask follow-up questions when explanations are unclear.
-- Identify missing key concepts.
-- Point out misunderstandings politely.
-- Encourage deeper thinking.
-- DO NOT fully teach the topic yourself unless correcting mistakes (to stay in scope).
+Behavior rules:
+
+If the student is explaining:
+- Evaluate their answer
+- Identify missing concepts
+- Ask follow-up questions
+
+If the student expresses confusion or asks for help:
+- Switch to teaching mode
+- Clearly explain the concept
+- Keep explanation concise
+- Then ask a follow-up question to continue learning
+
+Do NOT:
+- Repeat the same correction multiple times
+- Bring up past mistakes unless directly relevant
+
+Goal:
+Continuously push the student toward a complete and correct understanding.
 
 Start by saying you are ready to learn and ask the student to begin explaining.
 """);
@@ -268,7 +278,7 @@ Start by saying you are ready to learn and ask the student to begin explaining.
   }
 
   // --------------------------------------------------
-  // CHAT RESPONSE
+  // CHAT RESPONSE (UPDATED WITH HISTORY)
   // --------------------------------------------------
 
   Future<void> getChatResponse(ChatMessage m) async {
@@ -285,21 +295,50 @@ Start by saying you are ready to learn and ask the student to begin explaining.
         _typingUser.add(_geminiUser);
       });
 
+      // 🔥 Build conversation history (last 10 messages for safety)
+      final recentMessages = _messages.take(10);
+
+      final history = [
+        ...recentMessages.map((msg) {
+          final role = msg.user.id == '1' ? "Student" : "Gemini";
+          return "$role: ${msg.text}";
+        }),
+        "Student: ${m.text}"
+      ].join("\n");
+
       final responseText = await generateGeminiResponse("""
 Topic: $_currentTopic
 
-Student message:
-${m.text}
+Conversation so far:
+$history
 
-Remember your role:
+Behavior rules:
 
-Your role:
-- Act like a curious beginner who knows nothing.
-- Ask follow-up questions when explanations are unclear.
-- Identify missing key concepts.
-- Point out misunderstandings politely.
-- Encourage deeper thinking.
-- DO NOT fully teach the topic yourself unless correcting mistakes(to stay in scope).
+If the student is explaining:
+- Evaluate their answer
+- Identify missing concepts
+- Ask follow-up questions
+
+If the student expresses confusion or asks for help:
+- Switch to teaching mode
+- Clearly explain the concept
+- Keep explanation concise
+- Then ask a follow-up question to continue learning
+
+EXTRA TIPS:
+- Keep responses under 6 sentences unless explaining a concept to the student.
+- Assume the student remembers all prior explanations.
+- Do not repeat or re-summarize unless explicitly asked.
+- Ask about the next concept or missing piece only.
+- Never loop back to a topic that’s already resolved.
+
+Do NOT:
+- Repeat the same correction multiple times
+- Bring up past mistakes unless directly relevant
+- Ask the same question multiple times
+
+Goal:
+Continuously push the student toward a complete and correct understanding.
 """);
 
       await _service.addMessage(
