@@ -145,6 +145,18 @@ class FlashcardService {
     });
   }
 
+  Future<void> updateFlashcardSetIsPublic(String setId, bool isPublic) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    await FirebaseFirestore.instance
+        .collection('flashcard_sets')
+        .doc(setId)
+        .update({
+      'isPublic': isPublic,
+    });
+  }
+
   Stream<DocumentSnapshot<Map<String, dynamic>>> streamFlashcardSet(String setId) {
     return _firestore
         .collection('flashcard_sets')

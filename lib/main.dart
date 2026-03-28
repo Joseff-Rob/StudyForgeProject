@@ -27,6 +27,9 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           debugShowCheckedModeBanner: false,
           title: 'StudyForge',
+          theme: ThemeData(
+            fontFamily: 'NotoSans', // 👈 ADD THIS
+          ),
           builder: (context, child) {
             return MediaQuery(
               data: MediaQuery.of(context).copyWith(

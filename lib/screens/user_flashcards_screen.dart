@@ -120,6 +120,7 @@ class _UserFlashcardSetsScreenState extends State<UserFlashcardSetsScreen> {
 
                   return GestureDetector(
                     onLongPress: () {
+                      bool isPublic = set['isPublic'] ?? false;
                       showModalBottomSheet(
                         context: context,
                         builder: (_) => SafeArea(
@@ -142,6 +143,27 @@ class _UserFlashcardSetsScreenState extends State<UserFlashcardSetsScreen> {
                                 onTap: () {
                                   Navigator.pop(context);
                                   _deleteSet(set['id']);
+                                },
+                              ),
+                              StatefulBuilder(
+                                builder: (context, setStateSheet) {
+                                  return SwitchListTile(
+                                    title: const Text("Public"),
+                                    value: isPublic,
+                                    onChanged: (val) async {
+                                      setStateSheet(() {
+                                        isPublic = val; // updates the switch inside the sheet
+                                      });
+
+                                      // Update Firestore
+                                      await _flashcardService.updateFlashcardSetIsPublic(set['id'], val);
+
+                                      // Update local list so the UI reflects the change immediately
+                                      setState(() {
+                                        sets[index]['isPublic'] = val;
+                                      });
+                                    },
+                                  );
                                 },
                               ),
                             ],

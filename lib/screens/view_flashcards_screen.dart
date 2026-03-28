@@ -36,7 +36,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
   bool _isOwner = false;
 
-
+  bool _isPublic = false;
 
   @override
   void initState() {
@@ -502,6 +502,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
+        _isPublic = data['isPublic'] ?? false;
         final liveTitle = data['title'] ?? widget.setTitle;
 
         // Handle empty card list
@@ -620,37 +621,49 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
                         ),
-                        builder: (context) => SafeArea(
-                          child: Wrap(
-                            children: [
-                              ListTile(
-                                leading: const Icon(Icons.edit),
-                                title: const Text("Edit Flashcard"),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _showEditFlashcardDialog(card);
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.add),
-                                title: const Text("Add Flashcard"),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _showAddFlashcardDialog();
-                                },
-                              ),
-                              ListTile(
-                                leading: const Icon(Icons.delete, color: Colors.red),
-                                title: const Text(
-                                  "Delete Flashcard",
-                                  style: TextStyle(color: Colors.red),
+                        builder: (context) => StatefulBuilder(
+                          builder: (context, setStateSheet) => SafeArea(
+                            child: Wrap(
+                              children: [
+                                ListTile(
+                                  leading: const Icon(Icons.edit),
+                                  title: const Text("Edit Flashcard"),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _showEditFlashcardDialog(card);
+                                  },
                                 ),
-                                onTap: () {
-                                  Navigator.pop(context);
-                                  _deleteFlashcard(card['id']);
-                                },
-                              ),
-                            ],
+                                ListTile(
+                                  leading: const Icon(Icons.add),
+                                  title: const Text("Add Flashcard"),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _showAddFlashcardDialog();
+                                  },
+                                ),
+                                ListTile(
+                                  leading: const Icon(Icons.delete, color: Colors.red),
+                                  title: const Text(
+                                    "Delete Flashcard",
+                                    style: TextStyle(color: Colors.red),
+                                  ),
+                                  onTap: () {
+                                    Navigator.pop(context);
+                                    _deleteFlashcard(card['id']);
+                                  },
+                                ),
+                                SwitchListTile(
+                                  title: const Text("Public"),
+                                  value: _isPublic,
+                                  onChanged: (val) async {
+                                    // update inside the sheet
+                                    setStateSheet(() => _isPublic = val);
+                                    // update firestore
+                                    await _flashcardService.updateFlashcardSetIsPublic(widget.setId, val);
+                                  },
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
