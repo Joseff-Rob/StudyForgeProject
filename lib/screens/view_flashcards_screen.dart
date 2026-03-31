@@ -488,6 +488,73 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     });
   }
 
+  void _showQuizOptionsDialog() {
+    int selectedAmount = min(4, _cards.length); // default
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setStateDialog) {
+            return AlertDialog(
+              title: const Text("Start Quiz"),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text("How many questions would you like?"),
+                  const SizedBox(height: 20),
+
+                  Text(
+                    "$selectedAmount questions",
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  Slider(
+                    value: selectedAmount.toDouble(),
+                    min: 4,
+                    max: _cards.length.toDouble(),
+                    divisions: null,
+                    label: selectedAmount.toString(),
+                    onChanged: (value) {
+                      setStateDialog(() {
+                        selectedAmount = value.round();
+                      });
+                    },
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text("Cancel"),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => QuizScreen(
+                          setId: widget.setId,
+                          questionLimit: selectedAmount,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text("Start"),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
@@ -755,12 +822,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                             ),
                           ),
                           onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => QuizScreen(setId: widget.setId),
-                              ),
-                            );
+                            _showQuizOptionsDialog();
                           },
                         ),
                       ),

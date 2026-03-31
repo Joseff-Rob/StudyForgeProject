@@ -248,6 +248,17 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
 
             const SizedBox(height: 20),
 
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              color: Colors.amber.shade200,
+              child: Text(
+                "⚠️ Gemini can make mistakes. Verify Important Information!",
+                textAlign: TextAlign.center,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+
             if (generatedCards.isNotEmpty)
               Expanded(
                 child: ListView.builder(

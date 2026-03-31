@@ -203,7 +203,7 @@ class FlashcardService {
   Future<List<QuizQuestion>> generateQuizFromSet(
       String setId, {
         int optionsPerQuestion = 4,
-        int questionLimit = 10,
+        int? questionLimit
       }) async {
     final snapshot = await _firestore
         .collection('flashcard_sets')
@@ -226,8 +226,9 @@ class FlashcardService {
     final random = Random();
     flashcards.shuffle();
 
-    final selectedQuestions =
-    flashcards.take(min(questionLimit, flashcards.length)).toList();
+    final selectedQuestions = questionLimit == null
+        ? flashcards
+        : flashcards.take(min(questionLimit, flashcards.length)).toList();
 
     List<QuizQuestion> quiz = [];
 

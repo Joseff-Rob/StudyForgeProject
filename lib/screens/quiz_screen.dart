@@ -8,8 +8,9 @@ import '../services/firestore_flashcard_service.dart';
 
 class QuizScreen extends StatefulWidget {
   final String setId;
+  final int? questionLimit;
 
-  const QuizScreen({super.key, required this.setId});
+  const QuizScreen({super.key, required this.setId, this.questionLimit});
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -49,7 +50,10 @@ class _QuizScreenState extends State<QuizScreen>
   }
 
   Future<void> _loadQuiz() async {
-    final quiz = await _flashcardService.generateQuizFromSet(widget.setId);
+    final quiz = await _flashcardService.generateQuizFromSet(
+        widget.setId,
+        questionLimit: widget.questionLimit
+    );
 
     setState(() {
       _quiz = quiz;

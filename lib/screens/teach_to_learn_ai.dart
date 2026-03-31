@@ -336,7 +336,7 @@ $history
               padding: const EdgeInsets.all(12),
               color: Colors.amber.shade200,
               child: Text(
-                "Topic: $_currentTopic\n⚠️ Gemini can make mistakes. Verify Important Information",
+                "Topic: $_currentTopic\n⚠️ Gemini can make mistakes. Verify Important Information!",
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
