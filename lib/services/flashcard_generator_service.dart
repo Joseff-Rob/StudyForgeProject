@@ -16,6 +16,7 @@ Convert the following study material into flashcards.
 Rules:
 - Return ONLY valid JSON
 - No explanations
+- MAXIMUM LENGTH OF 180 CHARACTERS FOR A QUESTION/ANSWER.
 - Format:
 
 [

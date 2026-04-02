@@ -5,8 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_flashcard_service.dart';
-
-import 'package:StudyForgeProject/screens/report_logs_screen.dart'; // placeholder
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/foundation.dart';
+import 'package:web/web.dart' as web;
 
 class ViewFlashcardsScreen extends StatefulWidget {
   final String setId;
@@ -38,6 +39,8 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
   bool _isPublic = false;
 
+  final FlutterTts _tts = FlutterTts();
+
   @override
   void initState() {
     super.initState();
@@ -57,6 +60,38 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
         if (_currentIndex >= _cards.length) _currentIndex = 0;
       });
     });
+
+    _initTTS();
+  }
+
+  Future<void> _initTTS() async {
+    if (!kIsWeb) {
+      await _tts.setLanguage("en-GB"); // UK voice
+      await _tts.setSpeechRate(0.45);
+      await _tts.setPitch(1.0);
+    }
+  }
+
+  Future<void> _speak(String text) async {
+    if (text.isEmpty) return;
+
+    if (kIsWeb) {
+      final utterance = web.SpeechSynthesisUtterance(text);
+      utterance.lang = "en-GB";
+
+      web.window.speechSynthesis.speak(utterance);
+    } else {
+      await _tts.stop();
+      await _tts.speak(text);
+    }
+  }
+
+  void _stopTTS() {
+    if (kIsWeb) {
+      web.window.speechSynthesis.cancel();
+    } else {
+      _tts.stop();
+    }
   }
 
   Future<void> _checkOwnership() async {
@@ -458,6 +493,8 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
   void _flipCard() {
     if (_controller.isAnimating || _cards.isEmpty) return;
 
+    _stopTTS();
+
     _controller.forward(from: 0).then((_) {
       if (!mounted) return;
 
@@ -761,13 +798,31 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                               child: Transform(
                                 alignment: Alignment.center,
                                 transform: Matrix4.rotationY(angle > pi / 2 ? pi : 0),
-                                child: Text(
-                                  _showFront ? card['question'] : card['answer'],
-                                  textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text(
+                                      _showFront ? card['question'] : card['answer'],
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 20),
+
+                                    IconButton(
+                                      icon: const Icon(Icons.volume_up),
+                                      onPressed: () {
+                                        final text = _showFront
+                                            ? card['question']
+                                            : card['answer'];
+
+                                        _speak(text);
+                                      },
+                                    ),
+                                  ],
                                 ),
                               ),
                             ),

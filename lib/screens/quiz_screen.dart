@@ -6,6 +6,10 @@ import 'package:flutter/material.dart';
 import '../models/quiz_question.dart';
 import '../services/firestore_flashcard_service.dart';
 
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/foundation.dart';
+import 'package:web/web.dart' as web;
+
 class QuizScreen extends StatefulWidget {
   final String setId;
   final int? questionLimit;
@@ -29,6 +33,8 @@ class _QuizScreenState extends State<QuizScreen>
   bool _answered = false;
   String? _selectedAnswer;
 
+  final FlutterTts _tts = FlutterTts();
+
   @override
   void initState() {
     super.initState();
@@ -38,6 +44,15 @@ class _QuizScreenState extends State<QuizScreen>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
+    _initTTS();
+  }
+
+  Future<void> _initTTS() async {
+    if (!kIsWeb) {
+      await _tts.setLanguage("en-GB");
+      await _tts.setSpeechRate(0.45);
+      await _tts.setPitch(1.0);
+    }
   }
 
   @override
@@ -47,6 +62,27 @@ class _QuizScreenState extends State<QuizScreen>
       c.dispose();
     }
     super.dispose();
+  }
+
+  Future<void> _speak(String text) async {
+    if (text.isEmpty) return;
+
+    if (kIsWeb) {
+      final utterance = web.SpeechSynthesisUtterance(text);
+      utterance.lang = "en-GB";
+      web.window.speechSynthesis.speak(utterance);
+    } else {
+      await _tts.stop();
+      await _tts.speak(text);
+    }
+  }
+
+  void _stopTTS() {
+    if (kIsWeb) {
+      web.window.speechSynthesis.cancel();
+    } else {
+      _tts.stop();
+    }
   }
 
   Future<void> _loadQuiz() async {
@@ -84,6 +120,7 @@ class _QuizScreenState extends State<QuizScreen>
   }
 
   void _nextQuestion() {
+    _stopTTS();
     if (_currentQuestion < _quiz.length - 1) {
       setState(() {
         _currentQuestion++;
@@ -166,12 +203,23 @@ class _QuizScreenState extends State<QuizScreen>
             const SizedBox(height: 20),
 
             /// Question
-            Text(
-              question.question,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    question.question,
+                    style: const TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.volume_up),
+                  onPressed: () => _speak(question.question),
+                ),
+              ],
             ),
 
             const SizedBox(height: 30),
@@ -225,11 +273,20 @@ class _QuizScreenState extends State<QuizScreen>
                         ),
                       ),
                       onPressed: () => _selectAnswer(option),
-                      child: Text(
-                        option,
-                        textAlign: TextAlign.center,
-                        softWrap: true,
-                        style: const TextStyle(fontSize: 16),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              option,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(fontSize: 16),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.volume_up, size: 18),
+                            onPressed: () => _speak(option),
+                          ),
+                        ],
                       ),
                     ),
                   ),

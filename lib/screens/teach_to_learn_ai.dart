@@ -9,6 +9,10 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/foundation.dart';
+import 'package:web/web.dart' as web;
+
 class TeachToLearnAi extends StatefulWidget {
   final String lessonId;
 
@@ -47,17 +51,64 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
 
   bool _isGeneratingFlashcards = false;
 
+  final FlutterTts _tts = FlutterTts();
+
   @override
   void initState() {
     super.initState();
     _loadLesson();
     _listenToMessages();
+    _initTTS();
+  }
+
+  Future<void> _initTTS() async {
+    if (!kIsWeb) {
+      await _tts.setLanguage("en-GB");
+      await _tts.setSpeechRate(0.45);
+      await _tts.setPitch(1.0);
+    }
   }
 
   @override
   void dispose() {
     _messageSub?.cancel();
     super.dispose();
+  }
+
+  // TTS
+  Future<void> _speak(String text) async {
+    if (text.isEmpty) return;
+
+    final cleanedText = _cleanTextForTTS(text);
+
+    _stopTTS(); // 🔥 prevent overlap
+
+    if (kIsWeb) {
+      final utterance = web.SpeechSynthesisUtterance(cleanedText);
+      utterance.lang = "en-GB";
+      web.window.speechSynthesis.speak(utterance);
+    } else {
+      await _tts.speak(cleanedText);
+    }
+  }
+
+  void _stopTTS() {
+    if (kIsWeb) {
+      web.window.speechSynthesis.cancel();
+    } else {
+      _tts.stop();
+    }
+  }
+
+  String _cleanTextForTTS(String text) {
+    return text
+        .replaceAll(RegExp(r'\*+'), '')
+        .replaceAll(RegExp(r'_+'), '')
+        .replaceAll(RegExp(r'`+'), '')
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .replaceAll(RegExp(r'[-•] '), '')
+        .replaceAll(RegExp(r'\n'), '. ')
+        .trim();
   }
 
   // --------------------------------------------------
@@ -70,17 +121,28 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
 
           if (!mounted) return;
 
+          final newMessages = messages.map((m) {
+            return ChatMessage(
+              text: m['text'] ?? '',
+              user: m['sender'] == "student"
+                  ? _currentUser
+                  : _geminiUser,
+              createdAt:
+              (m['createdAt'] as Timestamp).toDate(),
+            );
+          }).toList();
+
+          /// 🔥 Detect newest Gemini message
+          if (_messages.isNotEmpty && newMessages.length > _messages.length) {
+            final latest = newMessages.first;
+
+            if (latest.user.id == _geminiUser.id) {
+              _speak(latest.text); // 🔊 AUTO READ AI
+            }
+          }
+
           setState(() {
-            _messages = messages.map((m) {
-              return ChatMessage(
-                text: m['text'] ?? '',
-                user: m['sender'] == "student"
-                    ? _currentUser
-                    : _geminiUser,
-                createdAt:
-                (m['createdAt'] as Timestamp).toDate(),
-              );
-            }).toList();
+            _messages = newMessages;
           });
         });
   }
@@ -264,6 +326,12 @@ $history
           "Teach-to-Learn with Gemini",
           style: TextStyle(color: Colors.white),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.stop, color: Colors.white,),
+            onPressed: _stopTTS,
+          ),
+        ],
       ),
       body: _lessonStarted ? _buildChatUI() : _buildIntroScreen(),
     );
@@ -362,6 +430,39 @@ $history
                   getChatResponse(m);
                 },
                 messages: _messages,
+
+                messageOptions: MessageOptions(
+                  messageTextBuilder: (message, previousMessage, nextMessage) {
+                    final isUser = message.user.id == _currentUser.id;
+
+                    return Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        /// TEXT
+                        Expanded(
+                          child: Text(
+                            message.text,
+                            style: TextStyle(
+                              color: isUser ? Colors.white : Colors.black,
+                            ),
+                          ),
+                        ),
+
+                        const SizedBox(width: 6),
+
+                        /// 🔊 TTS BUTTON
+                        GestureDetector(
+                          onTap: () => _speak(message.text),
+                          child: Icon(
+                            Icons.volume_up,
+                            size: 18,
+                            color: isUser ? Colors.white : Colors.black,
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
           ],
