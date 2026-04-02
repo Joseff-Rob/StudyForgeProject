@@ -7,7 +7,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_flashcard_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
-import 'package:web/web.dart' as web;
+
+import '../utils/tts_settings.dart';
+// import 'package:web/web.dart' as web;
 
 class ViewFlashcardsScreen extends StatefulWidget {
   final String setId;
@@ -66,6 +68,17 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
   Future<void> _initTTS() async {
     if (!kIsWeb) {
+      await loadTtsVoice(); // Load saved voice from SharedPreferences
+
+      final savedVoice = ttsVoiceNotifier.value;
+
+      if (savedVoice != null) {
+        try {
+          await _tts.setVoice(savedVoice);
+        } catch (e) {
+          print("Error setting saved voice: $e");
+        }
+      }
       await _tts.setLanguage("en-GB"); // UK voice
       await _tts.setSpeechRate(0.45);
       await _tts.setPitch(1.0);
@@ -76,19 +89,23 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     if (text.isEmpty) return;
 
     if (kIsWeb) {
-      final utterance = web.SpeechSynthesisUtterance(text);
-      utterance.lang = "en-GB";
-
-      web.window.speechSynthesis.speak(utterance);
+      // final utterance = web.SpeechSynthesisUtterance(text);
+      // utterance.lang = "en-GB";
+      //
+      // web.window.speechSynthesis.speak(utterance);
     } else {
       await _tts.stop();
+      final savedVoice = ttsVoiceNotifier.value;
+      if (savedVoice != null) {
+        await _tts.setVoice(savedVoice);
+      }
       await _tts.speak(text);
     }
   }
 
   void _stopTTS() {
     if (kIsWeb) {
-      web.window.speechSynthesis.cancel();
+      //web.window.speechSynthesis.cancel();
     } else {
       _tts.stop();
     }
@@ -809,19 +826,6 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-
-                                    const SizedBox(height: 20),
-
-                                    IconButton(
-                                      icon: const Icon(Icons.volume_up),
-                                      onPressed: () {
-                                        final text = _showFront
-                                            ? card['question']
-                                            : card['answer'];
-
-                                        _speak(text);
-                                      },
-                                    ),
                                   ],
                                 ),
                               ),
@@ -887,6 +891,15 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                 ],
               ),
             ),
+          ),
+          floatingActionButton: FloatingActionButton(
+            child: const Icon(Icons.volume_up),
+            onPressed: () {
+              final text = _cards.isNotEmpty
+                  ? (_showFront ? _cards[_currentIndex]['question'] : _cards[_currentIndex]['answer'])
+                  : '';
+              _speak(text);
+            },
           ),
         );
       },

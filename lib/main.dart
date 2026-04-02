@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'utils/font_scale.dart';
+import 'utils/tts_settings.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
@@ -12,6 +13,9 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  await loadFontScale();
+  await loadTtsVoice();
 
   runApp(const MyApp());
 }

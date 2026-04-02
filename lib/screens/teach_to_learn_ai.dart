@@ -11,7 +11,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
-import 'package:web/web.dart' as web;
+
+import '../utils/tts_settings.dart';
+// import 'package:web/web.dart' as web;
 
 class TeachToLearnAi extends StatefulWidget {
   final String lessonId;
@@ -63,6 +65,18 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
 
   Future<void> _initTTS() async {
     if (!kIsWeb) {
+      await loadTtsVoice(); // Load saved voice from SharedPreferences
+
+      final savedVoice = ttsVoiceNotifier.value;
+
+      if (savedVoice != null) {
+        try {
+          await _tts.setVoice(savedVoice);
+        } catch (e) {
+          print("Error setting saved voice: $e");
+        }
+      }
+
       await _tts.setLanguage("en-GB");
       await _tts.setSpeechRate(0.45);
       await _tts.setPitch(1.0);
@@ -84,17 +98,21 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     _stopTTS(); // 🔥 prevent overlap
 
     if (kIsWeb) {
-      final utterance = web.SpeechSynthesisUtterance(cleanedText);
-      utterance.lang = "en-GB";
-      web.window.speechSynthesis.speak(utterance);
+      // final utterance = web.SpeechSynthesisUtterance(cleanedText);
+      // utterance.lang = "en-GB";
+      // web.window.speechSynthesis.speak(utterance);
     } else {
+      final savedVoice = ttsVoiceNotifier.value;
+      if (savedVoice != null) {
+        await _tts.setVoice(savedVoice);
+      }
       await _tts.speak(cleanedText);
     }
   }
 
   void _stopTTS() {
     if (kIsWeb) {
-      web.window.speechSynthesis.cancel();
+      // web.window.speechSynthesis.cancel();
     } else {
       _tts.stop();
     }
