@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:StudyForgeProject/screens/create_flashcard_set_screen.dart';
 import 'package:StudyForgeProject/screens/flashcard_generate_screen.dart';
+import 'package:StudyForgeProject/screens/privacy_policy_screen.dart';
 import 'package:StudyForgeProject/screens/report_logs_screen.dart';
 import 'package:StudyForgeProject/screens/user_flashcards_screen.dart';
 import 'package:StudyForgeProject/screens/user_lessons_screen.dart';
@@ -373,6 +374,18 @@ class _MainMenuState extends State<MainMenu> {
 
                     const Spacer(),
 
+                    ListTile(
+                      leading: const Icon(Icons.privacy_tip),
+                      title: const Text("Privacy Policy"),
+                      iconColor: Colors.blue,
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                        );
+                      },
+                    ),
                     ListTile(
                       leading: const Icon(Icons.logout, color: Colors.red),
                       title: const Text(
