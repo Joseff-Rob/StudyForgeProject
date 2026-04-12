@@ -98,9 +98,13 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     _stopTTS(); // 🔥 prevent overlap
 
     if (kIsWeb) {
-      // final utterance = web.SpeechSynthesisUtterance(cleanedText);
-      // utterance.lang = "en-GB";
-      // web.window.speechSynthesis.speak(utterance);
+      final savedVoice = {
+        "name": "Google UK English Female",
+        "locale": "en-GB"
+      };
+
+      await _tts.setVoice(savedVoice);
+      await _tts.speak(cleanedText);
     } else {
       final savedVoice = ttsVoiceNotifier.value;
       if (savedVoice != null) {

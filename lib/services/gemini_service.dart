@@ -7,7 +7,7 @@ class GeminiService {
 
   GeminiService({
     required this.apiKey,
-    this.modelName = 'gemini-2.5-flash', // model you want to use
+    this.modelName = 'gemini-2.5-flash',
   });
 
   Future<String> generateText(String prompt) async {

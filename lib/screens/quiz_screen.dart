@@ -81,9 +81,13 @@ class _QuizScreenState extends State<QuizScreen>
     if (text.isEmpty) return;
 
     if (kIsWeb) {
-      // final utterance = web.SpeechSynthesisUtterance(text);
-      // utterance.lang = "en-GB";
-      // web.window.speechSynthesis.speak(utterance);
+      final savedVoice = {
+        "name": "Google UK English Female",
+        "locale": "en-GB"
+      };
+
+      await _tts.setVoice(savedVoice);
+      await _tts.speak(text);
     } else {
       await _tts.stop();
 
