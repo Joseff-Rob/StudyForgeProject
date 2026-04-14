@@ -5,7 +5,14 @@ import '../services/flashcard_generator_service.dart';
 import '../services/firestore_flashcard_service.dart';
 import '../consts.dart';
 
+/// Screen that handles the logic and UI for generating a flashcard set from
+/// digital notes (raw text or .txt file). Gemini is used to automatically
+/// generate flashcards in correct JSON format
+///
+/// Works alongside [FlashcardGeneratorService] to generate a set.
 class FlashcardGenerateScreen extends StatefulWidget {
+
+  /// Creates a [FlashcardGenerateScreen]
   const FlashcardGenerateScreen({super.key});
 
   @override
@@ -25,6 +32,12 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
 
   List<Map<String, String>> generatedCards = [];
 
+  /// Opens a file picker allowing users to select a '.txt' file.
+  ///
+  /// If a file is selected, its contents are read and populated
+  /// into the text input field.
+  ///
+  /// File name and option to remove is present in the UI of the screen.
   Future<void> pickTxtFile() async {
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
@@ -43,8 +56,8 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
         _textController.text = text;
         _uploadedFileName = result.files.single.name;
       });
+
     } else {
-      // fallback for platforms where path is available (mobile/desktop)
       final path = result.files.single.path;
       if (path != null) {
         final file = File(path);
@@ -58,6 +71,15 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
     }
   }
 
+  /// Generates flashcards from the provided text input using AI.
+  ///
+  /// User's notes is displayed in the UI for user review
+  /// Sends the user's notes to [FlashcardGeneratorService], which returns
+  /// a list of question–answer pairs. with the generated cards showed to
+  /// users before they choose to create the set.
+  ///
+  /// Displays a loading indicator during processing and shows an error
+  /// message if generation fails.
   Future<void> generateFlashcards() async {
     if (_textController.text.isEmpty) return;
 
@@ -85,6 +107,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
     });
   }
 
+  /// Creates the flashcard set based on the generated flashcards.
   Future<void> saveFlashcards() async {
     if (_titleController.text.isEmpty || generatedCards.isEmpty) return;
 
@@ -93,11 +116,13 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
     });
 
     try {
+      // Create set
       final setId = await _flashcardService.createFlashcardSet(
         title: _titleController.text,
         isPublic: _isPublic, // respect the toggle
       );
 
+      // Add each flashcard to the set.
       for (final card in generatedCards) {
         await _flashcardService.addFlashcard(
           setId: setId,
@@ -117,7 +142,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
           ),
         );
 
-        // Optionally clear the form / navigate back after a short delay
+        // Option to clear the form / navigate back after a short delay
         await Future.delayed(const Duration(seconds: 2));
         if (mounted) Navigator.pop(context);
       }
@@ -132,6 +157,14 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
     }
   }
 
+  /// Builds the user interface for generating a flashcard set.
+  ///
+  /// Includes:
+  /// - Set title and publicity defining.
+  /// - upload .txt file button.
+  /// - generate cards button.
+  /// - Raw text showed to user.
+  /// - After generated, shows cards generated with option to create set.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -142,6 +175,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
+            // Title field
             TextField(
               controller: _titleController,
               decoration: const InputDecoration(
@@ -158,6 +192,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
                   style: TextStyle(fontSize: 16),
                 ),
                 const SizedBox(width: 10),
+                // publicity switcher
                 Switch(
                   value: _isPublic,
                   onChanged: (value) {
@@ -172,6 +207,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
 
             Row(
               children: [
+                // Upload .txt file button
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: pickTxtFile,
@@ -180,6 +216,8 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
                   ),
                 ),
                 const SizedBox(width: 10),
+
+                // Generate cards button
                 Expanded(
                   child: ElevatedButton.icon(
                     onPressed: generateFlashcards,
@@ -192,11 +230,15 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
 
             const SizedBox(height: 10),
 
+            // Display file name with removal capability
             if (_uploadedFileName != null)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.grey[200],
                     borderRadius: BorderRadius.circular(12),
@@ -234,6 +276,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
 
             const SizedBox(height: 20),
 
+            // Digital notes text field
             Expanded(
               child: TextField(
                 controller: _textController,
@@ -248,6 +291,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
 
             const SizedBox(height: 20),
 
+            // Gemini Warner button for mistakes.
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(12),
@@ -259,6 +303,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
               ),
             ),
 
+            // Display generated cards.
             if (generatedCards.isNotEmpty)
               Expanded(
                 child: ListView.builder(
@@ -278,6 +323,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
 
             const SizedBox(height: 10),
 
+            // Save flashcard set button.
             if (generatedCards.isNotEmpty)
               SizedBox(
                 width: double.infinity,
@@ -288,6 +334,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
                 ),
               ),
 
+            // Loading animation.
             if (loading)
               const Padding(
                 padding: EdgeInsets.all(10),

@@ -15,9 +15,21 @@ import 'profile_page.dart';
 import 'teach_to_learn_ai.dart';
 import 'settings.dart';
 import 'view_flashcards_screen.dart';
-import '../consts.dart';
 
+/// Screen for the main menu of the application.
+///
+/// Includes:
+/// - Search functionality (Search for users and Flashcard sets).
+/// - Menu bar (Includes: View Profile, Settings, Privacy Policy and Log Out.
+/// For admins: Report logs.
+/// - Main menu layout (Includes: Welcome "Username" and StudyForge logo.
+/// - Navigation bar at bottom (Includes: Teach to learn lessons, Flashcards
+/// and Profile.
+///
+/// Mainly used for navigation to other application fearures.
 class MainMenu extends StatefulWidget {
+
+  /// Creates a [MainMenu] screen
   const MainMenu({super.key});
 
   @override
@@ -43,6 +55,7 @@ class _MainMenuState extends State<MainMenu> {
     });
   }
 
+  /// Disposes text controllers when the widget is removed (searching).
   @override
   void dispose() {
     _searchFocusNode.dispose();
@@ -51,8 +64,7 @@ class _MainMenuState extends State<MainMenu> {
     super.dispose();
   }
 
-  // ---------------- SEARCH ----------------
-
+  /// Performs a debounced search to reduce the number of search calls.
   void _performDebouncedSearch(String query) {
     if (_debounce?.isActive ?? false) _debounce!.cancel();
 
@@ -62,6 +74,7 @@ class _MainMenuState extends State<MainMenu> {
     );
   }
 
+  /// Search functionality to search for users and flashcard sets.
   Future<void> _search(String query) async {
     if (query.isEmpty) {
       setState(() {
@@ -74,7 +87,7 @@ class _MainMenuState extends State<MainMenu> {
     final lowerQuery = query.toLowerCase();
 
     try {
-      // ---------------- USERS SEARCH ----------------
+      // Users Search
       final userSnapshot = await FirebaseFirestore.instance
           .collection('users')
           .where('username_lower', isGreaterThanOrEqualTo: lowerQuery)
@@ -90,7 +103,7 @@ class _MainMenuState extends State<MainMenu> {
         };
       }).toList();
 
-      // ---------------- FLASHCARD SET SEARCH ----------------
+      // Flashcard sets search
       final setSnapshot = await FirebaseFirestore.instance
           .collection('flashcard_sets')
           .where('isPublic', isEqualTo: true)
@@ -101,13 +114,13 @@ class _MainMenuState extends State<MainMenu> {
           .limit(5)
           .get();
 
-      // Collect owner IDs
+      // Collect owner IDs.
       final ownerIds = setSnapshot.docs
           .map((doc) => doc['ownerId'] as String)
           .toSet()
           .toList();
 
-      // Fetch owner usernames in one batch query
+      // Fetch owner usernames in one batch query.
       Map<String, String> ownerUsernames = {};
 
       if (ownerIds.isNotEmpty) {
@@ -121,7 +134,10 @@ class _MainMenuState extends State<MainMenu> {
         }
       }
 
-      // Build final flashcard set results
+      /*
+       * Build final flashcard set results
+       *(includes set title, flashcard count and owner username).
+       */
       final sets = setSnapshot.docs.map((doc) {
         return {
           'id': doc.id,
@@ -132,7 +148,7 @@ class _MainMenuState extends State<MainMenu> {
         };
       }).toList();
 
-      // ---------------- UPDATE UI ----------------
+      // Display results to User Interface.
       setState(() {
         _userResults = users;
         _flashcardSetResults = sets;
@@ -142,6 +158,7 @@ class _MainMenuState extends State<MainMenu> {
     }
   }
 
+  /// Clear search results.
   void _clearSearch() {
     setState(() {
       _userResults = [];
@@ -151,9 +168,9 @@ class _MainMenuState extends State<MainMenu> {
     });
   }
 
-  // ---------------- NAVIGATION ----------------
-
+  /// Bottom navigation bar handling
   void _onItemTapped(int index) {
+    // Navigate to teach to learn features (new or existing lessons).
     if (index == 0) {
       showModalBottomSheet(
         context: context,
@@ -198,6 +215,11 @@ class _MainMenuState extends State<MainMenu> {
           ),
         ),
       );
+
+    /*
+     * Navigate to flashcard features
+     * (manual creation, generation or existing sets).
+     */
     } else if (index == 1) {
       showModalBottomSheet(
         context: context,
@@ -250,6 +272,8 @@ class _MainMenuState extends State<MainMenu> {
           ),
         ),
       );
+
+    // Navigate to user profile.
     } else if (index == 2) {
       showModalBottomSheet(
         context: context,
@@ -286,19 +310,25 @@ class _MainMenuState extends State<MainMenu> {
     setState(() => _selectedIndex = index);
   }
 
-  // ---------------- UI ----------------
-
+  /// Builds the user interface for the main menu of the application.
   @override
   Widget build(BuildContext context) {
+    /// Current user token from firebase authentication.
     final currentUser = FirebaseAuth.instance.currentUser;
 
     return StreamBuilder<DocumentSnapshot>(
       stream: currentUser != null
-          ? FirebaseFirestore.instance.collection('users').doc(currentUser.uid).snapshots()
+          ? FirebaseFirestore.instance.collection('users')
+          .doc(currentUser.uid)
+          .snapshots()
           : null,
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+              body: Center(
+                  child: CircularProgressIndicator()
+              )
+          );
         }
 
         final data = snapshot.data!.data() as Map<String, dynamic>;
@@ -306,9 +336,10 @@ class _MainMenuState extends State<MainMenu> {
         final isAdmin = data['isAdmin'] ?? false;
 
         return Scaffold(
-          backgroundColor: isAdmin ? const Color(0xFFFFCDD2) : const Color(0xFFDCE6F0),
+          backgroundColor: isAdmin ? const Color(0xFFFFCDD2)
+              : const Color(0xFFDCE6F0),
 
-          // ---------------- END DRAWER ----------------
+          // Menu Drawer
           endDrawer: SizedBox(
             width: MediaQuery.of(context).size.width * 0.75,
             child: Drawer(
@@ -320,6 +351,7 @@ class _MainMenuState extends State<MainMenu> {
                       padding: const EdgeInsets.symmetric(vertical: 24),
                       color: Colors.blueGrey,
                       child: Text(
+                        // Additional drawer options for admins.
                         isAdmin ? "Admin Menu" : "Menu",
                         textAlign: TextAlign.center,
                         style: const TextStyle(
@@ -330,6 +362,7 @@ class _MainMenuState extends State<MainMenu> {
                       ),
                     ),
 
+                    // View Profile
                     ListTile(
                       leading: const Icon(Icons.person),
                       title: const Text("View Profile"),
@@ -338,12 +371,16 @@ class _MainMenuState extends State<MainMenu> {
                         if (currentUser != null) {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (_) => ProfilePage(userId: currentUser.uid)),
+                            MaterialPageRoute(
+                                builder: (_) => ProfilePage(
+                                    userId: currentUser.uid)
+                            ),
                           );
                         }
                       },
                     ),
 
+                    // Go to settings.
                     ListTile(
                       leading: const Icon(Icons.settings),
                       title: const Text("Settings"),
@@ -351,12 +388,14 @@ class _MainMenuState extends State<MainMenu> {
                         Navigator.pop(context);
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const SettingsPage()),
+                          MaterialPageRoute(
+                              builder: (_) => const SettingsPage()
+                          ),
                         );
                       },
                     ),
 
-                    // Admin-only option
+                    // Admin-only option (Report Logs).
                     if (isAdmin)
                       ListTile(
                         leading: const Icon(Icons.report),
@@ -372,8 +411,10 @@ class _MainMenuState extends State<MainMenu> {
                         },
                       ),
 
+                    // Other options pushed to the bottom
                     const Spacer(),
 
+                    // Application privacy policy.
                     ListTile(
                       leading: const Icon(Icons.privacy_tip),
                       title: const Text("Privacy Policy"),
@@ -382,10 +423,14 @@ class _MainMenuState extends State<MainMenu> {
                         Navigator.pop(context);
                         Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()),
+                          MaterialPageRoute(
+                              builder: (_) => const PrivacyPolicyScreen()
+                          ),
                         );
                       },
                     ),
+
+                    // Log Out (return to login/register page)
                     ListTile(
                       leading: const Icon(Icons.logout, color: Colors.red),
                       title: const Text(
@@ -396,9 +441,11 @@ class _MainMenuState extends State<MainMenu> {
                         Navigator.pop(context);
                         final confirm = await showDialog<bool>(
                           context: context,
-                          builder: (context) => AlertDialog(
+                          builder: (context) => AlertDialog( // Confirmation
                             title: const Text("Log Out"),
-                            content: const Text("Are you sure you want to log out?"),
+                            content: const Text(
+                                "Are you sure you want to log out?"
+                            ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(context, false),
@@ -427,11 +474,12 @@ class _MainMenuState extends State<MainMenu> {
             ),
           ),
 
-          // ---------------- APPBAR ----------------
+          // Top App bar.
           appBar: AppBar(
             backgroundColor: isAdmin ? Colors.red.shade700 : Colors.blueGrey,
             title: Padding(
               padding: const EdgeInsets.symmetric(vertical: 8),
+              // Search bar.
               child: TextField(
                 controller: _searchController,
                 focusNode: _searchFocusNode,
@@ -444,11 +492,14 @@ class _MainMenuState extends State<MainMenu> {
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10
+                  ),
                 ),
               ),
             ),
             actions: [
+              // Menu drawer opener.
               Builder(
                 builder: (context) => IconButton(
                   icon: const Icon(Icons.menu),
@@ -458,13 +509,14 @@ class _MainMenuState extends State<MainMenu> {
             ],
           ),
 
-          // ---------------- BODY ----------------
+          // Main body of menu.
           body: Stack(
             children: [
               Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
+                    // Clear differentiation of admin users.
                     if (isAdmin)
                       Container(
                         padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 12),
@@ -481,6 +533,7 @@ class _MainMenuState extends State<MainMenu> {
                         ),
                       ),
                     const SizedBox(height: 10),
+                    // Welcome message.
                     Text(
                       "Welcome, $username 👋",
                       style: const TextStyle(
@@ -489,6 +542,7 @@ class _MainMenuState extends State<MainMenu> {
                       ),
                     ),
                     const SizedBox(height: 30),
+                    // StudyForge Logo
                     Image.asset(
                       'assets/images/StudyForgeLogo.png',
                       height: 180,
@@ -497,8 +551,9 @@ class _MainMenuState extends State<MainMenu> {
                 ),
               ),
 
-              // ---------------- SEARCH RESULTS ----------------
-              if (_userResults.isNotEmpty || _flashcardSetResults.isNotEmpty || _searchController.text.isNotEmpty)
+              // Display Search bar results.
+              if (_userResults.isNotEmpty || _flashcardSetResults.isNotEmpty
+                  || _searchController.text.isNotEmpty)
                 Positioned(
                   top: 10,
                   left: 16,
@@ -513,15 +568,19 @@ class _MainMenuState extends State<MainMenu> {
                         borderRadius: BorderRadius.circular(16),
                       ),
                       padding: const EdgeInsets.only(bottom: 12),
+                      // SingleChildScroller to avoid pixel overflows.
                       child: SingleChildScrollView(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // User results.
                             const Padding(
                               padding: EdgeInsets.all(12),
                               child: Text(
                                 "Users",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16
+                                ),
                               ),
                             ),
                             if (_userResults.isEmpty)
@@ -536,18 +595,25 @@ class _MainMenuState extends State<MainMenu> {
                                 onTap: () {
                                   Navigator.push(
                                     context,
-                                    MaterialPageRoute(builder: (_) => ProfilePage(userId: user['id'])),
+                                    MaterialPageRoute(
+                                        builder: (_) => ProfilePage(
+                                            userId: user['id']
+                                        )
+                                    ),
                                   );
                                   _clearSearch();
                                 },
                               );
                             }),
                             const Divider(),
+                            // Flashcard Sets results.
                             const Padding(
                               padding: EdgeInsets.all(12),
                               child: Text(
                                 "Flashcard Sets",
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 16
+                                ),
                               ),
                             ),
                             if (_flashcardSetResults.isEmpty)
@@ -558,7 +624,12 @@ class _MainMenuState extends State<MainMenu> {
                             ..._flashcardSetResults.map((set) {
                               return ListTile(
                                 leading: const Icon(Icons.style),
-                                title: Text("${set['name']} | ${set['cards']} cards | by ${set['ownerName']}"),
+                                // Normalised UI output for search results.
+                                title: Text(
+                                    "${set['name']} | "
+                                    "${set['cards']} cards | by "
+                                    "${set['ownerName']}"
+                                ),
                                 onTap: () {
                                   Navigator.push(
                                     context,
@@ -582,15 +653,24 @@ class _MainMenuState extends State<MainMenu> {
             ],
           ),
 
-          // ---------------- BOTTOM NAV ----------------
+          /*
+           * Bottom navigation bar UI, which open their corresponding options
+           * defined earlier in the class (_onItemTapped function).
+           */
           bottomNavigationBar: BottomNavigationBar(
             currentIndex: _selectedIndex,
             onTap: _onItemTapped,
             type: BottomNavigationBarType.fixed,
             items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.school), label: "Teach"),
-              BottomNavigationBarItem(icon: Icon(Icons.style), label: "Flashcards"),
-              BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: "Profile"),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.school), label: "Teach"
+              ),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.style), label: "Flashcards"
+              ),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline), label: "Profile"
+              ),
             ],
           ),
         );

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
 import '../services/firestore_flashcard_service.dart';
 import 'add_flashcard_screen.dart';
-import 'add_flashcard_screen.dart';
 
+/// Class that handles the logic and UI for creating a flashcard set and
+/// setting its publicity (public or private).
+///
+/// Works alongside [FlashcardService] to create an empty set to be filled.
 class CreateFlashcardSetScreen extends StatefulWidget {
+
+  /// Creates a [CreateFlashcardSetScreen]
   const CreateFlashcardSetScreen({super.key});
 
   @override
@@ -33,7 +38,10 @@ class _CreateFlashcardSetScreenState
     setState(() => _isLoading = true);
 
     try {
-      // Create the flashcard set in Firestore
+      /*
+       * Create the flashcard set in Firestore with the defined title
+       * and publicity (private or public)
+       */
       final setId = await _flashcardService.createFlashcardSet(
         title: title,
         isPublic: _isPublic,
@@ -60,12 +68,18 @@ class _CreateFlashcardSetScreenState
     setState(() => _isLoading = false);
   }
 
+  /// Disposes text controllers when the widget is removed.
   @override
   void dispose() {
     _titleController.dispose();
     super.dispose();
   }
 
+  /// Builds the user interface for creating a flashcard set.
+  ///
+  /// Including:
+  /// - Input title and publicity (private or public)
+  /// - Button to create set.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -82,6 +96,8 @@ class _CreateFlashcardSetScreenState
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
+
+            // Input set title
             TextField(
               controller: _titleController,
               decoration: InputDecoration(
@@ -92,6 +108,8 @@ class _CreateFlashcardSetScreenState
               ),
             ),
             const SizedBox(height: 20),
+
+            // publicity switcher.
             SwitchListTile(
               value: _isPublic,
               onChanged: (value) {
@@ -102,6 +120,8 @@ class _CreateFlashcardSetScreenState
             const Spacer(),
             SizedBox(
               width: double.infinity,
+
+              // Set creation button.
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _createSet,
                 style: ElevatedButton.styleFrom(

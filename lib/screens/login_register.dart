@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
-import 'main_menu.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/app_user.dart';
 import '../services/firestore_user_service.dart';
 
+/// Screen that handles user login and registration with firebase.
+///
+/// Works alongside [FirestoreUserService]
 class LoginRegisterPage extends StatefulWidget {
+
+  /// Creates a [LoginRegisterPage] screen
   const LoginRegisterPage({super.key});
 
   @override
@@ -22,27 +25,40 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
 
   final FirestoreUserService userService = FirestoreUserService();
 
+  /// Builds the user interface for user login and registration.
+  ///
+  /// Includes:
+  /// - StudyForge application logo and slogan.
+  /// - Logging in with email and password.
+  /// - Registration with username, email and password.
+  /// - Submit buttons.
+  /// - Changing login/register options.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFDCE6F0),
       body: Center(
+        // Wrapped in SingleChildScroller to avoid pixel overflows.
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // StudyForge logo.
               Image.asset(
                 'assets/images/StudyForgeLogo.png',
                 height: 150,
               ),
               const SizedBox(height: 16),
+              // StudyForge slogan.
               const Text(
                 "Where knowledge is forged.",
                 style: TextStyle(fontSize: 12, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
+
+              // Changing text depending on logging in or registering.
               Text(
                 isLogin ? "Login" : "Register",
                 style: const TextStyle(
@@ -101,13 +117,13 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
 
                   try {
                     if (isLogin) {
-                      // LOGIN
+                      // Login
                       await FirebaseAuth.instance.signInWithEmailAndPassword(
                         email: emailController.text.trim(),
                         password: passwordController.text.trim(),
                       );
                     } else {
-                      // REGISTER
+                      // Register
                       final username = usernameController.text.trim();
 
                       if (username.isEmpty) {
@@ -189,6 +205,7 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                 ),
               ],
 
+              // Login/Register screen switcher button.
               TextButton(
                 onPressed: () {
                   setState(() {

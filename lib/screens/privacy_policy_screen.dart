@@ -1,8 +1,21 @@
 import 'package:flutter/material.dart';
 
+/// Screen that handles the UI for demonstrating StudyForge's privacy policy.
+///
+/// Includes:
+/// - Data Collection.
+/// - How data is used.
+/// - Data storage.
+/// - An AI feature disclaimer.
+/// - User rights.
+/// - Security details.
+/// - Contact details.
 class PrivacyPolicyScreen extends StatelessWidget {
+
+  /// Creates a [PrivacyPolicyScreen].
   const PrivacyPolicyScreen({super.key});
 
+  /// UI for the large text field demonstrating the applications privacy policy.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -33,10 +46,13 @@ Your data is used to:
 - Store and retrieve your content securely
 
 3. Data Storage
-All data is securely stored using Firebase services. We take reasonable measures to protect your data.
+All data is securely stored using Firebase services. 
+We take reasonable measures to protect your data.
 
 4. AI Features Disclaimer
-This application uses AI to generate educational content. While we aim for accuracy, AI-generated responses may contain errors. Users should verify important information.
+This application uses AI to generate educational content. 
+While we aim for accuracy, AI-generated responses may contain errors. 
+Users should verify important information.
 
 5. User Rights
 You have the right to:

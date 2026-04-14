@@ -1,10 +1,22 @@
 import 'package:flutter/material.dart';
 import '../services/firestore_flashcard_service.dart';
 
+/// Class that handles the logic and UI for filling flashcard sets with
+/// cards.
+/// Including:
+/// - Adding Flashcard.
+/// - Editing Flashcard.
+/// - Deleting Flashcard.
+/// - Displaying existing flashcards in real time.
+///
+/// Works alongside [FlashcardService] to perform operations.
 class AddFlashcardScreen extends StatefulWidget {
+  /// Flashcard set unique identifier
   final String setId;
+  /// Flashcard set title
   final String setTitle;
 
+  /// Creates an [AddFlashcardScreen] for a specific set.
   const AddFlashcardScreen({
     super.key,
     required this.setId,
@@ -22,14 +34,14 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
 
   bool _isAdding = false;
 
-  // --------------------------
-  // ADD FLASHCARD
-  // --------------------------
+  bool _hasFlashcards = false;
 
+  /// Adds a new flashcard to the current set.
   Future<void> _addFlashcard() async {
     final question = _questionController.text.trim();
     final answer = _answerController.text.trim();
 
+    // Validation (not empty fields)
     if (question.isEmpty || answer.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter question + answer")),
@@ -57,11 +69,9 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
     setState(() => _isAdding = false);
   }
 
-  // --------------------------
-  // EDIT FLASHCARD
-  // --------------------------
-
+  /// Displays a dialog allowing the user to edit a selected flashcard.
   void _showEditFlashcardDialog(Map<String, dynamic> card) {
+    // Pre-fills fields with current flashcard terms and definition.
     final questionController =
     TextEditingController(text: card['question']);
     final answerController =
@@ -70,9 +80,11 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
     showDialog(
       context: context,
       builder: (context) {
+        // Popup Dialog
         return AlertDialog(
           title: const Text("Edit Flashcard"),
 
+          // SingleChildScroller used to prevent pixel overflow.
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -117,16 +129,14 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
     );
   }
 
-  // --------------------------
-  // DELETE FLASHCARD
-  // --------------------------
-
+  /// Deletes a selected flashcard.
   Future<void> _deleteFlashcard(String id) async {
     try {
       await _flashcardService.deleteFlashcard(
         setId: widget.setId,
         flashcardId: id,
       );
+    // Error handling.
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Delete failed: $e")),
@@ -134,6 +144,7 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
     }
   }
 
+  /// Disposes text controllers when the widget is removed.
   @override
   void dispose() {
     _questionController.dispose();
@@ -141,10 +152,12 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
     super.dispose();
   }
 
-  // --------------------------
-  // UI
-  // --------------------------
-
+  /// Builds the user interface for managing flashcards.
+  ///
+  /// Including:
+  /// - Input fields for question and answer (each side of the flashcard)
+  /// - Buttons to add card and submit set.
+  /// - Live updating list of flashcards.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -157,6 +170,7 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
         child: Column(
           children: [
 
+            // Question text field (one side of the flashcard)
             TextField(
               controller: _questionController,
               decoration: const InputDecoration(
@@ -167,6 +181,7 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
 
             const SizedBox(height: 12),
 
+            // Answer text field (other side of the flashcard)
             TextField(
               controller: _answerController,
               decoration: const InputDecoration(
@@ -177,6 +192,7 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
 
             const SizedBox(height: 12),
 
+            // Add flashcard button.
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
@@ -191,19 +207,23 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
 
             const SizedBox(height: 12),
 
+            // Set submission button
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
-                onPressed: () {
+                onPressed: _hasFlashcards
+                    ? () {
                   Navigator.popUntil(
                       context, (route) => route.isFirst);
-                },
+                }
+                    : null,
                 child: const Text("Submit Set"),
               ),
             ),
 
             const SizedBox(height: 20),
 
+            // Live list of flashcards in the current set
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
                 stream:
@@ -216,6 +236,13 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
                   }
 
                   final flashcards = snapshot.data!;
+                  if (_hasFlashcards != flashcards.isNotEmpty) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      setState(() {
+                        _hasFlashcards = flashcards.isNotEmpty;
+                      });
+                    });
+                  }
 
                   return ListView.builder(
                     itemCount: flashcards.length,
@@ -231,12 +258,14 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
 
+                              // edit flashcard button
                               IconButton(
                                 icon: const Icon(Icons.edit),
                                 onPressed: () =>
                                     _showEditFlashcardDialog(card),
                               ),
 
+                              // Delete flashcard button
                               IconButton(
                                 icon: const Icon(
                                   Icons.delete,
