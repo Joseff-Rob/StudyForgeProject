@@ -7,9 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/firestore_flashcard_service.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
-
 import '../utils/tts_settings.dart';
-// import 'package:web/web.dart' as web;
 
 class ViewFlashcardsScreen extends StatefulWidget {
   final String setId;
@@ -634,11 +632,6 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
           return Scaffold(
             appBar: AppBar(
               backgroundColor: Colors.blueGrey,
-              leading: IconButton(
-                icon: const Icon(Icons.report, color: Colors.red),
-                tooltip: "Report Flashcard Set",
-                onPressed: _reportFlashcardSet,
-              ),
               title: Text(liveTitle),
               actions: [
                 if (_isOwner)
@@ -648,8 +641,47 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                   ),
               ],
             ),
-            body: const Center(
-              child: Text("No flashcards in this set."),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.note_alt_outlined,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    "This set has no flashcards yet",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 10),
+
+                  if (_isOwner)
+                    const Text(
+                      "Add your first flashcard to get started",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    const SizedBox(height: 25),
+                  if (_isOwner)
+                    ElevatedButton.icon(
+                      icon: const Icon(Icons.add),
+                      label: const Text("Add Flashcard"),
+                      onPressed: _showAddFlashcardDialog,
+                    ),
+
+                  const SizedBox(height: 12),
+
+                  TextButton.icon(
+                    icon: const Icon(Icons.report, color: Colors.red),
+                    label: const Text(
+                      "Report Set",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onPressed: _reportFlashcardSet,
+                  ),
+                ],
+              ),
             ),
           );
         }
