@@ -595,6 +595,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                       MaterialPageRoute(
                         builder: (_) => QuizScreen(
                           setId: widget.setId,
+                          setName: widget.setTitle,
                           questionLimit: selectedAmount,
                         ),
                       ),
@@ -768,7 +769,11 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
                   // Flashcard display
                   GestureDetector(
-                    onTap: _flipCard,
+                    onTap: () {
+                      // only flip if not scrolling.
+                      FocusScope.of(context).unfocus();
+                      _flipCard();
+                    },
                     onLongPress: () {
                       if (!_isOwner) return;
 
@@ -850,18 +855,35 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                               child: Transform(
                                 alignment: Alignment.center,
                                 transform: Matrix4.rotationY(angle > pi / 2 ? pi : 0),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      _showFront ? card['question'] : card['answer'],
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w600,
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    return SizedBox(
+                                      height: double.infinity,
+                                      child: Center(
+                                        child: SingleChildScrollView(
+                                          physics: const BouncingScrollPhysics(),
+                                          child: ConstrainedBox(
+                                            constraints: BoxConstraints(
+                                              minHeight: constraints.maxHeight,
+                                            ),
+                                            child: Center(
+                                              child: Padding(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                child: Text(
+                                                  _showFront ? card['question'] : card['answer'],
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 22,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
+                                    );
+                                  },
                                 ),
                               ),
                             ),

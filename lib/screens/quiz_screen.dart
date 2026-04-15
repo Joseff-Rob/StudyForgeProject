@@ -1,22 +1,31 @@
 import 'dart:math';
-
 import 'package:StudyForgeProject/screens/quiz_results_screen.dart';
 import 'package:flutter/material.dart';
-
 import '../models/quiz_question.dart';
 import '../services/firestore_flashcard_service.dart';
-
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
-
 import '../utils/tts_settings.dart';
-// import 'package:web/web.dart' as web;
 
+/// Class to handle quiz logic and UI.
+///
+/// Includes:
+/// - Quiz progress bar.
+/// - Question with three incorrect answer and one correct answer.
+/// - Text-To-Speech capabilities on questions and answer.
+/// - Next question/Finish quiz button.
 class QuizScreen extends StatefulWidget {
   final String setId;
+  final String setName;
   final int? questionLimit;
 
-  const QuizScreen({super.key, required this.setId, this.questionLimit});
+  /// Creates a [QuizScreen].
+  const QuizScreen({
+    super.key,
+    required this.setId,
+    required this.setName,
+    this.questionLimit
+  });
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -25,9 +34,10 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen>
     with TickerProviderStateMixin {
   final FlashcardService _flashcardService = FlashcardService();
-  Map<String, AnimationController> _optionControllers = {};
+  final Map<String, AnimationController> _optionControllers = {};
   late AnimationController _shakeController;
 
+  // Quiz Helper Variables.
   List<QuizQuestion> _quiz = [];
   int _currentQuestion = 0;
   int _score = 0;
@@ -35,8 +45,13 @@ class _QuizScreenState extends State<QuizScreen>
   bool _answered = false;
   String? _selectedAnswer;
 
+  // Text-To-Speech.
   final FlutterTts _tts = FlutterTts();
 
+  /// Initialises the state of the quiz screen.
+  ///
+  /// Loads quiz data, sets up the animation controller used for UI feedback
+  /// and initialises the text-to-speech (TTS functionality).
   @override
   void initState() {
     super.initState();
@@ -49,6 +64,7 @@ class _QuizScreenState extends State<QuizScreen>
     _initTTS();
   }
 
+  /// Sets up the initial state of the TTS voice.
   Future<void> _initTTS() async {
     if (!kIsWeb) {
       await loadTtsVoice(); // Load saved voice from SharedPreferences
@@ -68,6 +84,7 @@ class _QuizScreenState extends State<QuizScreen>
     }
   }
 
+  /// Disposes controllers when the widget is removed.
   @override
   void dispose() {
     _shakeController.dispose();
@@ -77,6 +94,7 @@ class _QuizScreenState extends State<QuizScreen>
     super.dispose();
   }
 
+  /// Activates the Text-To-Speech, reading what is pressed (text).
   Future<void> _speak(String text) async {
     if (text.isEmpty) return;
 
@@ -99,14 +117,17 @@ class _QuizScreenState extends State<QuizScreen>
     }
   }
 
+  /// Stops Text-To-Speech from talking.
   void _stopTTS() {
     if (kIsWeb) {
+      //Couldn't use due to compiler errors.
       // web.window.speechSynthesis.cancel();
     } else {
       _tts.stop();
     }
   }
 
+  /// Loads a quiz of X amount of questions, each with 4 options (1 correct).
   Future<void> _loadQuiz() async {
     final quiz = await _flashcardService.generateQuizFromSet(
         widget.setId,
@@ -119,6 +140,10 @@ class _QuizScreenState extends State<QuizScreen>
     });
   }
 
+  /// Selecting an answer.
+  ///
+  /// Different animation for correct and incorrect answers.
+  /// On incorrect answers, the correct answer is displayed.
   void _selectAnswer(String answer) {
     if (_answered) return;
 
@@ -141,6 +166,7 @@ class _QuizScreenState extends State<QuizScreen>
     });
   }
 
+  /// Next question/finish quiz button logic.
   void _nextQuestion() {
     _stopTTS();
     if (_currentQuestion < _quiz.length - 1) {
@@ -154,6 +180,7 @@ class _QuizScreenState extends State<QuizScreen>
     }
   }
 
+  /// Navigates to the [QuizResultScreen] to display quiz results to user.
   void _showResults() {
     Navigator.push(
       context,
@@ -161,6 +188,7 @@ class _QuizScreenState extends State<QuizScreen>
         builder: (_) => QuizResultScreen(
           score: _score,
           total: _quiz.length,
+          quizName: widget.setName,
           onRetry: () {
             Navigator.pop(context);
 
@@ -177,6 +205,11 @@ class _QuizScreenState extends State<QuizScreen>
     );
   }
 
+  /// Changes colour of questions when an answer is selected.
+  /// Blue = No answer yet selected.
+  /// Green = Correct answer.
+  /// Red = Chose incorrect answer.
+  /// Grey = Other options.
   Color _getButtonColor(String option) {
     if (!_answered) return Colors.blue;
 
@@ -189,6 +222,7 @@ class _QuizScreenState extends State<QuizScreen>
     return Colors.grey;
   }
 
+  /// Builds the UI interface for a quiz question.
   @override
   Widget build(BuildContext context) {
     if (_loading) {
@@ -201,11 +235,14 @@ class _QuizScreenState extends State<QuizScreen>
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Flashcard Quiz"),
+        title: Text("${widget.setName} Quiz"),
       ),
+      // Wrapped in a SingleChildScroller to avoid pixel overflow errors.
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.only(left: 20, right: 20, top: 20, bottom: 70),
+          padding: const EdgeInsets.only(
+              left: 20, right: 20, top: 20, bottom: 70
+          ),
           child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -216,7 +253,7 @@ class _QuizScreenState extends State<QuizScreen>
               borderRadius: BorderRadius.circular(8),
             ),
 
-            /// Progress
+            // Progress Bar.
             Text(
               "Question ${_currentQuestion + 1} / ${_quiz.length}",
               style: const TextStyle(fontSize: 16),
@@ -224,7 +261,7 @@ class _QuizScreenState extends State<QuizScreen>
 
             const SizedBox(height: 20),
 
-            /// Question
+            // Question.
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -237,6 +274,7 @@ class _QuizScreenState extends State<QuizScreen>
                     ),
                   ),
                 ),
+                // TTS Button for the question.
                 IconButton(
                   icon: const Icon(Icons.volume_up),
                   onPressed: () => _speak(question.question),
@@ -246,9 +284,9 @@ class _QuizScreenState extends State<QuizScreen>
 
             const SizedBox(height: 30),
 
-            /// Options
+            // Answer options.
             ...question.options.map((option) {
-              // Create controller if not exist
+              // Create controller if it doesn't exist.
               _optionControllers.putIfAbsent(option, () => AnimationController(
                 vsync: this,
                 duration: const Duration(milliseconds: 300),
@@ -266,7 +304,9 @@ class _QuizScreenState extends State<QuizScreen>
                 animation: Listenable.merge([_shakeController, scale]),
                 builder: (context, child) {
                   double offset = 0;
-                  if (_selectedAnswer == option && _selectedAnswer != _quiz[_currentQuestion].correctAnswer) {
+                  if (_selectedAnswer == option
+                      && _selectedAnswer != _quiz[_currentQuestion]
+                          .correctAnswer) {
                     // shake animation
                     offset = 8 * sin(_shakeController.value * pi * 4);
                   }
@@ -274,7 +314,9 @@ class _QuizScreenState extends State<QuizScreen>
                   return Transform.translate(
                     offset: Offset(offset, 0),
                     child: Transform.scale(
-                      scale: (_selectedAnswer == option && _selectedAnswer == _quiz[_currentQuestion].correctAnswer)
+                      scale: (_selectedAnswer == option
+                              && _selectedAnswer == _quiz[_currentQuestion]
+                              .correctAnswer)
                           ? scale.value
                           : 1.0,
                       child: child,
@@ -289,7 +331,10 @@ class _QuizScreenState extends State<QuizScreen>
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _getButtonColor(option),
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 16
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -304,6 +349,7 @@ class _QuizScreenState extends State<QuizScreen>
                               style: const TextStyle(fontSize: 16),
                             ),
                           ),
+                          // Options TTS button.
                           IconButton(
                             icon: const Icon(Icons.volume_up, size: 18),
                             onPressed: () => _speak(option),
@@ -315,10 +361,9 @@ class _QuizScreenState extends State<QuizScreen>
                 ),
               );
             }),
-
             const SizedBox(height: 20),
 
-            /// Next button
+            // Next Question/Finish Quiz button.
             if (_answered)
               SizedBox(
                 width: double.infinity,

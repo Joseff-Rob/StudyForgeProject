@@ -3,19 +3,27 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../services/firestore_flashcard_service.dart';
 import 'view_flashcards_screen.dart';
 
+// TODO Merge this file with user_flashcards_screen.dart.
+
+/// Class that handles logic to view other flashcard sets from a specific
+/// user profile.
+///
+/// Including:
+/// - Viewing a list of flashcard sets (click to view full set).
+/// - Editing set title, publicity and deleting set on a long hold of a set.
+/// - Display which sets are private.
 class PublicUserFlashcardSetsScreen extends StatelessWidget {
   final String userId;
   final String username;
 
+  /// Creates a [PublicUserFlashcardSetsScreen].
   const PublicUserFlashcardSetsScreen({
     super.key,
     required this.userId,
     required this.username,
   });
 
-  // -------------------------
-  // DELETE SET
-  // -------------------------
+  /// Confirmation popup when deleting a flashcard set.
   Future<void> _deleteSet(BuildContext context, String setId) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -38,14 +46,13 @@ class PublicUserFlashcardSetsScreen extends StatelessWidget {
       ),
     );
 
+    // Delete set.
     if (confirm ?? false) {
       await FlashcardService().deleteFlashcardSet(setId);
     }
   }
 
-  // -------------------------
-  // EDIT TITLE
-  // -------------------------
+  /// Popup for editing a flashcard set title.
   Future<void> _editTitle(
       BuildContext context, String setId, String currentTitle) async {
 
@@ -66,6 +73,7 @@ class PublicUserFlashcardSetsScreen extends StatelessWidget {
           ),
           ElevatedButton(
             onPressed: () async {
+              // Update title.
               await FlashcardService().updateFlashcardSetTitle(
                 setId,
                 controller.text.trim(),
@@ -79,21 +87,24 @@ class PublicUserFlashcardSetsScreen extends StatelessWidget {
     );
   }
 
+  /// Builds the user interface for a list of flashcard sets owned by
+  /// a specific user.
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
     final isOwnerProfile = currentUser != null && currentUser.uid == userId;
 
-    final flashcardService = FlashcardService();
+    final FlashcardService _flashcardService  = FlashcardService();
 
     return Scaffold(
       appBar: AppBar(
+        // Custom title depending on flashcard sets owner.
         title: Text("$username's Flashcards"),
         backgroundColor: Colors.blueGrey,
       ),
 
       body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: flashcardService.streamFlashcardSetsForProfile(userId),
+        stream: _flashcardService.streamFlashcardSetsForProfile(userId),
         builder: (context, snapshot) {
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -102,12 +113,14 @@ class PublicUserFlashcardSetsScreen extends StatelessWidget {
 
           final sets = snapshot.data ?? [];
 
+          // If user has no flashcard sets.
           if (sets.isEmpty) {
             return const Center(
               child: Text("No flashcard sets available"),
             );
           }
 
+          // List of flashcards UI.
           return ListView.builder(
             padding: const EdgeInsets.all(12),
             itemCount: sets.length,
@@ -118,8 +131,10 @@ class PublicUserFlashcardSetsScreen extends StatelessWidget {
               final count = set['flashcardCount'] ?? 0;
 
               return GestureDetector(
+                // Long press to edit title, publicity or delete set if owned.
                 onLongPress: isOwnerProfile
                     ? () {
+                  bool isPublic = set['isPublic'] ?? false;
                   showModalBottomSheet(
                     context: context,
                     builder: (_) => SafeArea(
@@ -147,12 +162,31 @@ class PublicUserFlashcardSetsScreen extends StatelessWidget {
                               _deleteSet(context, set['id']);
                             },
                           ),
+                          StatefulBuilder(
+                            builder: (context, setStateSheet) {
+                              return SwitchListTile(
+                                title: const Text("Public"),
+                                value: isPublic,
+                                onChanged: (val) async {
+                                  setStateSheet(() {
+                                    isPublic = val;
+                                  });
+
+                                  // Update Firestore
+                                  await _flashcardService
+                                      .updateFlashcardSetIsPublic(
+                                          set['id'], val
+                                      );
+                                },
+                              );
+                            },
+                          ),
                         ],
                       ),
                     ),
                   );
                 }
-                    : null,
+                : null,
 
                 child: Card(
                   child: ListTile(
@@ -162,6 +196,7 @@ class PublicUserFlashcardSetsScreen extends StatelessWidget {
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
+                        // Show lock icon on private sets.
                         if (!set['isPublic'] && isOwnerProfile)
                           const Padding(
                             padding: EdgeInsets.only(right: 8),
@@ -173,6 +208,7 @@ class PublicUserFlashcardSetsScreen extends StatelessWidget {
                       ],
                     ),
 
+                    // Navigate to flashcard set.
                     onTap: () {
                       Navigator.push(
                         context,

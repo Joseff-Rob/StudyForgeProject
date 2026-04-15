@@ -3,14 +3,21 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+/// Class that handles the logic and UI for user profiles
+///
+/// Including:
+/// - Viewing Profile.
+/// - Editing Email and Username.
+/// - Deleting Account.
+/// - Viewing Flashcard Sets.
+/// - Report user.
 class ProfilePage extends StatelessWidget {
   final String? userId;
 
+  /// Creates a [ProfilePage] screen.
   const ProfilePage({super.key, this.userId});
 
-  // ----------------------------
-  // REPORT USER
-  // ----------------------------
+  /// Alert dialog for reporting a user. Requests a reason.
   Future<void> _reportUser(
       BuildContext context, String userId, String username) async {
     final controller = TextEditingController();
@@ -60,9 +67,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // ----------------------------
-  // DELETE ACCOUNT
-  // ----------------------------
+  /// Confirmation dialog of account deletion to avoid accidental deletes.
   Future<void> _deleteAccount(
       BuildContext context, String uid) async {
     final confirm = await showDialog<bool>(
@@ -71,7 +76,8 @@ class ProfilePage extends StatelessWidget {
         title: const Text("Delete Account"),
         content: const Text(
             "Are you sure you want to delete this account? "
-                "This action will remove all flashcard sets and cannot be undone."),
+            "This action will remove all flashcard sets and cannot be undone."
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -88,12 +94,13 @@ class ProfilePage extends StatelessWidget {
 
     if (confirm != true) return;
 
-    // Delete all flashcard sets by this user
+    // Get all flashcard sets by this user when deleting.
     final setsSnapshot = await FirebaseFirestore.instance
         .collection('flashcard_sets')
         .where('ownerId', isEqualTo: uid)
         .get();
 
+    // Delete all sets owned by the user.
     for (final doc in setsSnapshot.docs) {
       await FirebaseFirestore.instance
           .collection('flashcard_sets')
@@ -101,10 +108,10 @@ class ProfilePage extends StatelessWidget {
           .delete();
     }
 
-    // Delete the user document
+    // Delete the user document.
     await FirebaseFirestore.instance.collection('users').doc(uid).delete();
 
-    // If current user deletes their own account, delete Firebase Auth account
+    // If current user deletes their own account, delete Firebase Auth account.
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser != null && currentUser.uid == uid) {
       await currentUser.delete();
@@ -117,9 +124,7 @@ class ProfilePage extends StatelessWidget {
     Navigator.pop(context); // go back after deletion
   }
 
-  // ----------------------------
-  // EDIT USERNAME
-  // ----------------------------
+  /// Popup to edit username asynchronously.
   Future<void> _editUsername(
       BuildContext context, String uid, String currentUsername) async {
     final controller = TextEditingController(text: currentUsername);
@@ -143,9 +148,11 @@ class ProfilePage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               final newUsername = controller.text.trim();
+              // Non-empty usernames only.
               if (newUsername.isEmpty) return;
 
               final taken = await isUsernameTaken(newUsername, uid);
+              // No taken usernames allowed.
               if (taken) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Username already taken")),
@@ -167,6 +174,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  /// Helper method which checks if a username already exists.
   Future<bool> isUsernameTaken(String username, String currentUid) async {
     final query = await FirebaseFirestore.instance
         .collection('users')
@@ -176,9 +184,7 @@ class ProfilePage extends StatelessWidget {
     return query.docs.any((doc) => doc.id != currentUid);
   }
 
-  // ----------------------------
-  // EDIT EMAIL
-  // ----------------------------
+  /// Popup to edit email asynchronously.
   Future<void> _editEmail(
       BuildContext context, String uid, String currentEmail) async {
     final controller = TextEditingController(text: currentEmail);
@@ -202,11 +208,13 @@ class ProfilePage extends StatelessWidget {
           TextButton(
             onPressed: () async {
               final newEmail = controller.text.trim();
+              // Non-empty emails only
               if (newEmail.isEmpty) return;
 
               final taken = await isEmailTaken(newEmail, uid);
               if (taken) {
                 ScaffoldMessenger.of(context).showSnackBar(
+                  // No multiple accounts per email.
                   const SnackBar(content: Text("Email already taken")),
                 );
                 return;
@@ -230,6 +238,7 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
+  /// Helper method which checks if an email already exists.
   Future<bool> isEmailTaken(String email, String currentUid) async {
     final query = await FirebaseFirestore.instance
         .collection('users')
@@ -239,6 +248,8 @@ class ProfilePage extends StatelessWidget {
     return query.docs.any((doc) => doc.id != currentUid);
   }
 
+  /// Builds editable cards for a field (email or username)
+  /// (Saves from duplicate code)
   Widget _buildInfoCard({
     required String title,
     required String value,
@@ -292,14 +303,13 @@ class ProfilePage extends StatelessWidget {
     );
   }
 
-  // ----------------------------
-  // UI
-  // ----------------------------
+  /// Builds the user interface for a user profile page screen.
   @override
   Widget build(BuildContext context) {
     final currentUser = FirebaseAuth.instance.currentUser;
     final uidToShow = userId ?? currentUser?.uid;
 
+    // Fallback.
     if (uidToShow == null) {
       return const Scaffold(
         body: Center(child: Text("No user to display")),
@@ -312,6 +322,7 @@ class ProfilePage extends StatelessWidget {
       backgroundColor: const Color(0xFFDCE6F0),
       appBar: AppBar(
         backgroundColor: Colors.blueGrey,
+        //Different title depending on ownership.
         title: Text(isCurrentUser ? "Your Profile" : "User Profile"),
         actions: [
           FutureBuilder<DocumentSnapshot>(
@@ -323,8 +334,11 @@ class ProfilePage extends StatelessWidget {
               if (!snapshot.hasData) return const SizedBox.shrink();
               final currentData =
                   snapshot.data!.data() as Map<String, dynamic>? ?? {};
+
+              // Allows for admin only privileges.
               final isAdmin = currentData['isAdmin'] ?? false;
 
+              // Owner or admin can delete account.
               if (isCurrentUser || isAdmin) {
                 return IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
@@ -350,6 +364,7 @@ class ProfilePage extends StatelessWidget {
                 return const Center(child: CircularProgressIndicator());
               }
 
+              // Fallback.
               if (!snapshot.hasData || !snapshot.data!.exists) {
                 return const Center(child: Text("Profile data not found."));
               }
@@ -363,7 +378,7 @@ class ProfilePage extends StatelessWidget {
 
               return Column(
                 children: [
-                  // ---------------- PROFILE HEADER ----------------
+                  // Profile Header.
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
@@ -375,7 +390,9 @@ class ProfilePage extends StatelessWidget {
                         const CircleAvatar(
                           radius: 40,
                           backgroundColor: Colors.white,
-                          child: Icon(Icons.person, size: 40, color: Colors.blueGrey),
+                          child: Icon(
+                              Icons.person, size: 40, color: Colors.blueGrey
+                          ),
                         ),
                         const SizedBox(height: 12),
                         Text(
@@ -386,10 +403,14 @@ class ProfilePage extends StatelessWidget {
                             color: Colors.white,
                           ),
                         ),
+                        // Add admin badge.
                         if (isAdmin) ...[
                           const SizedBox(height: 8),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4
+                            ),
                               decoration: BoxDecoration(
                                 color: Colors.red.shade700,
                                 borderRadius: BorderRadius.circular(20),
@@ -408,10 +429,9 @@ class ProfilePage extends StatelessWidget {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 20),
 
-                  // ---------------- USER INFO CARD ----------------
+                  // User information cards (username and email can be edited).
                   _buildInfoCard(
                     title: "Username",
                     value: username,
@@ -419,7 +439,6 @@ class ProfilePage extends StatelessWidget {
                     onEdit: () =>
                         _editUsername(context, uidToShow, username),
                   ),
-
                   const SizedBox(height: 16),
 
                   _buildInfoCard(
@@ -429,10 +448,9 @@ class ProfilePage extends StatelessWidget {
                     onEdit: () =>
                         _editEmail(context, uidToShow, email),
                   ),
-
                   const SizedBox(height: 24),
 
-                  // ---------------- ACTION BUTTONS ----------------
+                  // Button to view all user flashcard sets.
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
@@ -458,6 +476,7 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ),
 
+                  // Button to report user.
                   if (!isCurrentUser) ...[
                     const SizedBox(height: 16),
                     SizedBox(
