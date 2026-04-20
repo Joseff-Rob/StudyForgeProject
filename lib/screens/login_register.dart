@@ -142,31 +142,35 @@ class _LoginRegisterPageState extends State<LoginRegisterPage> {
                       }
 
                       // Create user
-                      UserCredential userCredential = await FirebaseAuth.instance
+                      final userCredential = await FirebaseAuth.instance
                           .createUserWithEmailAndPassword(
                         email: emailController.text.trim(),
                         password: passwordController.text.trim(),
                       );
 
+                      // Wait for auth state to settle.
                       final user = userCredential.user;
-                      if (user == null || user.email == null) {
-                        setState(() {
-                          errorMessage = "Failed to create user";
-                        });
+
+                      if (user == null) {
+                        setState(() => errorMessage = "User creation failed");
                         return;
                       }
+
+                      await user.reload();
+                      final freshUser = FirebaseAuth.instance.currentUser!;
 
                       // Update displayName in FirebaseAuth
                       await user.updateDisplayName(username);
 
                       // Save in Firestore with lowercase username for search
-                      AppUser newUser = AppUser(
-                        uid: user.uid,
-                        email: user.email!,
-                        username: username,
-                        usernameLower: username.toLowerCase(),
+                      await userService.createUser(
+                        AppUser(
+                          uid: freshUser.uid,
+                          email: freshUser.email!,
+                          username: username,
+                          usernameLower: username.toLowerCase(),
+                        ),
                       );
-                      await userService.createUser(newUser);
                     }
 
                   } on FirebaseAuthException catch (e) {

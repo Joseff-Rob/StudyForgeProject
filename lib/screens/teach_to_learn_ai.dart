@@ -41,8 +41,10 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
   List<ChatUser> _typingUser = [];
 
   final String geminiApiKey = GEMINI_API_KEY;
-  final String modelName = 'gemini-2.5-flash';
-
+  final List<String> models = [
+    'gemini-2.5-pro',
+    'gemini-2.5-flash',
+  ];
   final TextEditingController _topicController =
   TextEditingController();
 
@@ -557,6 +559,7 @@ If the student expresses confusion or asks for help:
 Do NOT:
 - Repeat the same correction multiple times
 - Bring up past mistakes unless directly relevant
+- Ask the same question multiple times (even if not strictly answered)
 
 Goal:
 Continuously push the student toward a complete and correct understanding.
@@ -646,7 +649,7 @@ EXTRA TIPS:
 Do NOT:
 - Repeat the same correction multiple times
 - Bring up past mistakes unless directly relevant
-- Ask the same question multiple times
+- Ask the same question multiple times (even if not strictly answered)
 
 Goal:
 Continuously push the student toward a complete and correct understanding.
@@ -681,42 +684,58 @@ Continuously push the student toward a complete and correct understanding.
   // --------------------------------------------------
 
   Future<String> generateGeminiResponse(String prompt) async {
+    const maxRetries = 2;
 
-    try {
-
+    for (final model in models) {
       final url = Uri.parse(
-          'https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent?key=$geminiApiKey');
-
-      final response = await http.post(
-        url,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: jsonEncode({
-          "contents": [
-            {
-              "parts": [
-                {"text": prompt}
-              ]
-            }
-          ]
-        }),
+        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$geminiApiKey',
       );
 
-      print("Gemini status: ${response.statusCode}");
-      print(response.body);
+      for (int attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          final response = await http.post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              "contents": [
+                {
+                  "parts": [
+                    {"text": prompt}
+                  ]
+                }
+              ]
+            }),
+          );
 
-      if (response.statusCode != 200) {
-        return "Gemini is not available right now.";
+          print("[$model] status: ${response.statusCode}");
+
+          // ✅ success
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            return data['candidates'][0]['content']['parts'][0]['text'];
+          }
+
+          // 🔥 overload / rate limit → retry same model
+          if (response.statusCode == 503 || response.statusCode == 429) {
+            final delay = Duration(seconds: 2 * (attempt + 1));
+            print("[$model] overloaded → retry in ${delay.inSeconds}s");
+            await Future.delayed(delay);
+            continue;
+          }
+
+          // ❌ other error → break to next model
+          print("[$model] failed: ${response.body}");
+          break;
+
+        } catch (e) {
+          print("[$model] exception: $e");
+          await Future.delayed(Duration(seconds: 2));
+        }
       }
 
-      final data = jsonDecode(response.body);
-
-      return data['candidates'][0]['content']['parts'][0]['text'];
-
-    } catch (e) {
-      print("Gemini error: $e");
-      return "Error contacting Gemini.";
+      print("Switching from $model to fallback...");
     }
+
+    return "Gemini is busy right now. Try again in a moment.";
   }
 }

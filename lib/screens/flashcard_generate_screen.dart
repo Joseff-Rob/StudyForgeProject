@@ -333,6 +333,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
                   label: const Text("Save Flashcard Set"),
                 ),
               ),
+            const SizedBox(height: 20),
 
             // Loading animation.
             if (loading)
@@ -343,6 +344,7 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
           ],
         ),
       ),
+
     );
   }
 }

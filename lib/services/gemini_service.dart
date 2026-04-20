@@ -15,43 +15,54 @@ class GeminiService {
         'https://generativelanguage.googleapis.com/v1beta/models/$modelName:generateContent'
     );
 
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'x-goog-api-key': apiKey,
-      },
-      body: jsonEncode({
-        "contents": [
-          {
-            "parts": [
-              {"text": prompt}
-            ]
+    for (int attempt = 0; attempt < 3; attempt++) {
+      final response = await http.post(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey,
+        },
+        body: jsonEncode({
+          "contents": [
+            {
+              "parts": [
+                {"text": prompt}
+              ]
+            }
+          ]
+        }),
+      );
+
+      // ✅ Success
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+
+        final candidates = data['candidates'] as List<dynamic>?;
+
+        if (candidates != null && candidates.isNotEmpty) {
+          final content = candidates[0]['content'] as Map<String, dynamic>?;
+          final parts = content?['parts'] as List<dynamic>?;
+
+          if (parts != null && parts.isNotEmpty) {
+            return parts.map((p) => p['text'] ?? "").join("");
           }
-        ]
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-
-      // The response contains a list of candidates → we take the first one
-      final candidates = data['candidates'] as List<dynamic>?;
-
-      if (candidates != null && candidates.isNotEmpty) {
-        final content = candidates[0]['content'] as Map<String, dynamic>?;
-        final parts = content?['parts'] as List<dynamic>?;
-
-        if (parts != null && parts.isNotEmpty) {
-          // Join all text parts into one string
-          return parts.map((p) => p['text'] ?? "").join("");
         }
+
+        return "No content returned";
       }
-      return "No content returned";
-    } else {
+
+      // 🔁 Retry only on overload errors
+      if (response.statusCode == 503 || response.statusCode == 429) {
+        await Future.delayed(Duration(seconds: 2 * (attempt + 1)));
+        continue;
+      }
+
+      // ❌ Real failure (bad key, bad request, etc.)
       throw Exception(
           "Gemini API error: ${response.statusCode} ${response.body}"
       );
     }
+
+    return "AI is temporarily overloaded. Please try again.";
   }
 }

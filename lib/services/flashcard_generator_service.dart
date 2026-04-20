@@ -6,62 +6,91 @@ class FlashcardGeneratorService {
 
   FlashcardGeneratorService({required this.geminiApiKey});
 
+  final List<String> models = [
+    'gemini-2.5-pro',
+    'gemini-2.5-flash'
+  ];
+
   Future<List<Map<String, String>>> generateFlashcards(String text) async {
-    final url = Uri.parse(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$geminiApiKey");
+    const maxRetries = 2;
 
-    final prompt = """
-Convert the following study material into flashcards.
+    for (final model in models) {
+      final url = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$geminiApiKey',
+      );
 
-Rules:
-- Return ONLY valid JSON
-- No explanations
-- MAXIMUM LENGTH OF 180 CHARACTERS FOR A QUESTION/ANSWER.
-- Format:
+      for (int attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          final response = await http.post(
+            url,
+            headers: {"Content-Type": "application/json"},
+            body: jsonEncode({
+              "contents": [
+                {
+                  "parts": [
+                    {
+                      "text": """
+Generate flashcards from this text.
 
+Return ONLY valid JSON:
 [
- { "question": "...", "answer": "..." }
+  {"question": "...", "answer": "..."}
 ]
 
-Material:
+Rules:
+- concise
+- accurate
+- no duplicates
+
+Text:
 $text
-""";
+"""
+                    }
+                  ]
+                }
+              ]
+            }),
+          );
 
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "contents": [
-          {
-            "parts": [
-              {"text": prompt}
-            ]
+          print("[$model] flashcards status: ${response.statusCode}");
+
+          // ✅ success
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+
+            String raw = data['candidates'][0]['content']['parts'][0]['text'];
+
+            raw = raw.replaceAll("```json", "").replaceAll("```", "").trim();
+
+            final decoded = jsonDecode(raw) as List<dynamic>;
+
+            return decoded
+                .map((e) => {
+              "question": e["question"].toString(),
+              "answer": e["answer"].toString(),
+            })
+                .toList();
           }
-        ]
-      }),
-    );
 
-    if (response.statusCode != 200) {
-      throw Exception("Gemini API error: ${response.body}");
+          // 🔥 overload → retry same model
+          if (response.statusCode == 503 || response.statusCode == 429) {
+            final delay = Duration(seconds: 2 * (attempt + 1));
+            await Future.delayed(delay);
+            continue;
+          }
+
+          // ❌ other error → switch model
+          break;
+
+        } catch (e) {
+          print("[$model] error: $e");
+          await Future.delayed(const Duration(seconds: 2));
+        }
+      }
+
+      print("Switching flashcard model fallback → $model");
     }
 
-    final data = jsonDecode(response.body);
-
-    final textResponse =
-    data["candidates"][0]["content"]["parts"][0]["text"];
-
-    final jsonStart = textResponse.indexOf("[");
-    final jsonEnd = textResponse.lastIndexOf("]");
-
-    final cleanJson = textResponse.substring(jsonStart, jsonEnd + 1);
-
-    final List decoded = jsonDecode(cleanJson);
-
-    return decoded.map((e) {
-      return {
-        "question": e["question"].toString(),
-        "answer": e["answer"].toString(),
-      };
-    }).toList();
+    throw Exception("Gemini is busy. Try again later.");
   }
 }
