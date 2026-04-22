@@ -9,10 +9,23 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
 import '../utils/tts_settings.dart';
 
+/// Class that handles the UI and logic of a flashcard practise screen.
+///
+/// Including:
+/// - Correct display of terms and definitions with animation to revise
+/// with the set cards.
+/// - Link to view flashcard set owner.
+/// - Set actions for owners (Edit title, set publicity).
+/// - Individual Card actions for owners (Edit card term and definition,
+/// add flashcard to set and delete card).
+/// - Set reporting for all users.
+/// - TTS functionality.
+/// - Link to complete a quiz of custom length based on flashcards in set.
 class ViewFlashcardsScreen extends StatefulWidget {
   final String setId;
   final String setTitle;
 
+  /// Creates a [ViewFlashcardsScreen].
   const ViewFlashcardsScreen({
     super.key,
     required this.setId,
@@ -41,6 +54,12 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
   final FlutterTts _tts = FlutterTts();
 
+  /// Initialises the state of a flashcard set screen.
+  ///
+  /// Loads the animation controller for flashcard flipping.
+  /// Checks for flashcard set ownership.
+  /// Ensures the displayed card index remains valid when the dataset updates.
+  /// Loads the lesson and TTS state for different voice preferences.
   @override
   void initState() {
     super.initState();
@@ -64,6 +83,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     _initTTS();
   }
 
+  /// Sets up the initial state of the TTS voice.
   Future<void> _initTTS() async {
     if (!kIsWeb) {
       await loadTtsVoice(); // Load saved voice from SharedPreferences
@@ -83,6 +103,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     }
   }
 
+  /// Activates the Text-To-Speech, reading what is pressed (text).
   Future<void> _speak(String text) async {
     if (text.isEmpty) return;
 
@@ -104,14 +125,16 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     }
   }
 
+  /// Stops Text-To-Speech from talking.
   void _stopTTS() {
     if (kIsWeb) {
-      //web.window.speechSynthesis.cancel();
+      //web.window.speechSynthesis.cancel(); // Not applicable for mobile.
     } else {
       _tts.stop();
     }
   }
 
+  /// Checks for flashcard set ownership.
   Future<void> _checkOwnership() async {
     final user = FirebaseAuth.instance.currentUser;
 
@@ -127,13 +150,14 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     });
   }
 
+  /// Disposes controllers when the widget is removed.
   @override
   void dispose() {
     _controller.dispose();
     super.dispose();
   }
 
-  // Edit flashcard set title.
+  /// Popup for editing flashcard set title.
   void _showEditSetDialog(String currentTitle) {
     if (!_isOwner) return;
 
@@ -181,6 +205,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
                         ElevatedButton(
                           onPressed: () async {
+                            // Update set title in Firestore.
                             await _flashcardService.updateFlashcardSetTitle(
                               widget.setId,
                               controller.text.trim(),
@@ -202,8 +227,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
   }
 
-  // Edit 1 flashcard
-
+  /// Edit the currently displayed flashcard term and/or definition.
   void _showEditFlashcardDialog(Map<String, dynamic> card) {
     if (!_isOwner) return;
 
@@ -263,6 +287,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
                         ElevatedButton(
                           onPressed: () async {
+                            // Update flashcard in Firestore.
                             await _flashcardService.updateFlashcard(
                               setId: widget.setId,
                               flashcardId: card['id'],
@@ -275,28 +300,31 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                           child: const Text("Save"),
                         ),
 
-                        // Delete button with confirmation
+                        // Delete button with confirmation.
                         ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red, // make button red
-                            foregroundColor: Colors.white, // text white
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
                           ),
                           onPressed: () async {
-                            // Show confirmation dialog
+                            // Show confirmation dialog.
                             final confirm = await showDialog<bool>(
                               context: context,
                               builder: (context) => AlertDialog(
                                 title: const Text("Delete Flashcard"),
                                 content: const Text(
-                                  "Are you sure you want to delete this flashcard?",
+                                  "Are you sure you want to "
+                                      "delete this flashcard?",
                                 ),
                                 actions: [
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context, false),
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
                                     child: const Text("Cancel"),
                                   ),
                                   TextButton(
-                                    onPressed: () => Navigator.pop(context, true),
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
                                     child: const Text(
                                       "Delete",
                                       style: TextStyle(color: Colors.red),
@@ -306,14 +334,14 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                               ),
                             );
 
-                            // If confirmed, delete the flashcard
+                            // If confirmed, delete the flashcard.
                             if (confirm == true) {
                               await _flashcardService.deleteFlashcard(
                                 setId: widget.setId,
                                 flashcardId: card['id'],
                               );
 
-                              Navigator.pop(context); // close the edit dialog
+                              Navigator.pop(context); // close the edit dialog.
                             }
                           },
                           child: const Text("Delete Card"),
@@ -330,7 +358,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
   }
 
-  // Delete flashcard
+  /// Flashcard deletion flashcard popup.
   void _deleteFlashcard(String flashcardId) async {
     if (!_isOwner) return;
 
@@ -356,14 +384,14 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
 
     if (confirm != true) return;
-
+    // Delete card.
     await _flashcardService.deleteFlashcard(
       setId: widget.setId,
       flashcardId: flashcardId,
     );
   }
 
-  // Add new flashcard
+  /// Add new flashcard with term and definition popup.
   void _showAddFlashcardDialog() {
     if (!_isOwner) return;
 
@@ -436,7 +464,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                                   answerController.text.trim().isEmpty) {
                                 return;
                               }
-
+                              // Add card.
                               await _flashcardService.addFlashcard(
                                 setId: widget.setId,
                                 question: questionController.text.trim(),
@@ -460,6 +488,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
   }
 
+  /// Report set with reason popup.
   void _reportFlashcardSet() {
     final TextEditingController reportController = TextEditingController();
 
@@ -485,6 +514,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
             onPressed: () async {
               final reason = reportController.text.trim();
               if (reason.isNotEmpty) {
+                // Submits the report to Firebase.
                 await FirebaseFirestore.instance.collection('reports').add({
                   'targetType': 'set',
                   'targetId': widget.setId,
@@ -504,10 +534,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
   }
 
-  // -------------------------
-  // CARD CONTROLS
-  // -------------------------
-
+  /// Flip card animation (stops TTS from playing if a card is flipped).
   void _flipCard() {
     if (_controller.isAnimating || _cards.isEmpty) return;
 
@@ -524,25 +551,29 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     });
   }
 
+  /// Moves to the next card in the set.
   void _nextCard() {
     if (_cards.isEmpty) return;
 
-    setState(() {
-      _showFront = true;
-      _currentIndex = (_currentIndex + 1) % _cards.length;
-    });
-  }
+      setState(() {
+        _showFront = true;
+        _currentIndex = (_currentIndex + 1) % _cards.length;
+      });
+    }
 
-  void _prevCard() {
-    if (_cards.isEmpty) return;
+        /// Moves to the previous card in the set.
+        void _prevCard() {
+      if (_cards.isEmpty) return;
 
-    setState(() {
+      setState(() {
       _showFront = true;
       _currentIndex =
           (_currentIndex - 1 + _cards.length) % _cards.length;
     });
   }
 
+  /// Popup for users to create a quiz with a custom amount of questions
+  /// (length of quiz between 4 and all cards).
   void _showQuizOptionsDialog() {
     int selectedAmount = min(4, _cards.length); // default
 
@@ -592,6 +623,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
                     Navigator.push(
                       context,
+                      // Navigates to the quiz screen.
                       MaterialPageRoute(
                         builder: (_) => QuizScreen(
                           setId: widget.setId,
@@ -611,6 +643,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
     );
   }
 
+  /// Builds the UI for flashcard revision, modifications and quiz loading.
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<DocumentSnapshot>(
@@ -628,7 +661,7 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
         _isPublic = data['isPublic'] ?? false;
         final liveTitle = data['title'] ?? widget.setTitle;
 
-        // Handle empty card list
+        // Fallback for empty set (second add card button for owners).
         if (_cards.isEmpty) {
           return Scaffold(
             appBar: AppBar(
@@ -715,12 +748,15 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
 
                     final username = ownerData['username'] ?? "Unknown";
 
+                    // Navigate to set owners profile.
                     return GestureDetector(
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => ProfilePage(userId: data['ownerId']),
+                            builder: (_) => ProfilePage(
+                                userId: data['ownerId']
+                            ),
                           ),
                         );
                       },
@@ -750,11 +786,13 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                   onPressed: _showAddFlashcardDialog,
                 ),
               if (_isOwner)
+                // Edit set title.
                 IconButton(
                   icon: const Icon(Icons.edit),
                   onPressed: () => _showEditSetDialog(liveTitle),
                 ),
               if (_isOwner)
+                // Edit individual flashcard term/definition.
                 IconButton(
                   icon: const Icon(Icons.edit_note),
                   onPressed: () => _showEditFlashcardDialog(card),
@@ -823,12 +861,29 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                                     await _flashcardService.updateFlashcardSetIsPublic(widget.setId, val);
                                   },
                                 ),
+                                ListTile(
+                                  leading: const Icon(Icons.person),
+                                  title: const Text(
+                                    "Vier Owner Profile",
+                                  ),
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ProfilePage(
+                                            userId: data['ownerId']
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
                               ],
                             ),
                           ),
                         ),
                       );
                     },
+                    // Card flip animation.
                     child: AnimatedBuilder(
                       animation: _controller,
                       builder: (context, child) {
@@ -854,23 +909,28 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
                             child: Center(
                               child: Transform(
                                 alignment: Alignment.center,
-                                transform: Matrix4.rotationY(angle > pi / 2 ? pi : 0),
+                                transform: Matrix4.rotationY(
+                                    angle > pi / 2 ? pi : 0
+                                ),
                                 child: LayoutBuilder(
                                   builder: (context, constraints) {
                                     return SizedBox(
                                       height: double.infinity,
                                       child: Center(
                                         child: SingleChildScrollView(
-                                          physics: const BouncingScrollPhysics(),
+                                          physics:
+                                              const BouncingScrollPhysics(),
                                           child: ConstrainedBox(
                                             constraints: BoxConstraints(
                                               minHeight: constraints.maxHeight,
                                             ),
                                             child: Center(
                                               child: Padding(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                padding: const EdgeInsets
+                                                    .symmetric(horizontal: 8),
                                                 child: Text(
-                                                  _showFront ? card['question'] : card['answer'],
+                                                  _showFront ? card['question']
+                                                      : card['answer'],
                                                   textAlign: TextAlign.center,
                                                   style: const TextStyle(
                                                     fontSize: 22,
@@ -953,7 +1013,8 @@ class _ViewFlashcardsScreenState extends State<ViewFlashcardsScreen>
             child: const Icon(Icons.volume_up),
             onPressed: () {
               final text = _cards.isNotEmpty
-                  ? (_showFront ? _cards[_currentIndex]['question'] : _cards[_currentIndex]['answer'])
+                  ? (_showFront ? _cards[_currentIndex]['question']
+                  : _cards[_currentIndex]['answer'])
                   : '';
               _speak(text);
             },

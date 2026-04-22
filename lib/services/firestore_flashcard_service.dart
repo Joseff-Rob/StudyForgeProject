@@ -261,51 +261,6 @@ class FlashcardService {
     return quiz;
   }
 
-  // final OcrService _ocrService = OcrService();
-  //
-  // Future<void> importPdfAsFlashcards({
-  //   required Uint8List pdfBytes,
-  //   required String setTitle,
-  //   String? filePath,
-  //   required String apiKey,
-  //   bool isPublic = false,
-  // }) async {
-  //   // 1️⃣ Extract text from PDF
-  //   final text = await _ocrService.extractTextFromPdf(
-  //     pdfBytes: pdfBytes,
-  //     filePath: filePath,
-  //   );
-  //
-  //   if (text.isEmpty) {
-  //     throw Exception("No text extracted from PDF");
-  //   }
-  //
-  //   // 2️⃣ Generate flashcards using Gemini
-  //   final generator = FlashcardGeneratorService(geminiApiKey: GEMINI_API_KEY);
-  //
-  //   // Truncate if text too long for API
-  //   final truncatedText = text.length > 12000 ? text.substring(0, 12000) : text;
-  //
-  //   final flashcards = await generator.generateFlashcards(truncatedText);
-  //
-  //   if (flashcards.isEmpty) {
-  //     throw Exception("AI did not return any flashcards");
-  //   }
-  //
-  //   // 3️⃣ Create flashcard set with title & public flag
-  //   final setId = await createFlashcardSet(title: setTitle, isPublic: isPublic);
-  //
-  //   // 4️⃣ Add flashcards to Firestore
-  //   for (final card in flashcards) {
-  //     final question = card["question"]?.trim();
-  //     final answer = card["answer"]?.trim();
-  //
-  //     if (question != null && answer != null && question.isNotEmpty && answer.isNotEmpty) {
-  //       await addFlashcard(setId: setId, question: question, answer: answer);
-  //     }
-  //   }
-  // }
-
   Future<void> importTextAsFlashcards({
     required String rawText,
     required String setTitle,

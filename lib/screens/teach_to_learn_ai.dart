@@ -13,11 +13,20 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:flutter/foundation.dart';
 
 import '../utils/tts_settings.dart';
-// import 'package:web/web.dart' as web;
+// import 'package:web/web.dart' as web; // Not Applicable with mobile builds.
 
+/// Class that handles the UI and AI logic behind "Teach-To-Learn" lessons.
+///
+/// Including:
+/// - Logic for new and existing discussions.
+/// - TTS Functionality.
+/// - Generation of flashcards from discussion.
+/// - AI prompts to promote a positive learning experience.
+/// - Logic for making calls to gemini.
 class TeachToLearnAi extends StatefulWidget {
   final String lessonId;
 
+  /// Creates a [TeachToLearnAi] screen.
   const TeachToLearnAi({
     super.key,
     required this.lessonId,
@@ -31,6 +40,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
 
   final TeachToLearnService _service = TeachToLearnService();
 
+  /// Types of users (Students/Users and Gemini)
   final ChatUser _currentUser =
   ChatUser(id: '1', firstName: "Student");
 
@@ -41,6 +51,9 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
   List<ChatUser> _typingUser = [];
 
   final String geminiApiKey = GEMINI_API_KEY;
+
+  /// Models used in the application
+  /// (fallback to second if pro is not functional).
   final List<String> models = [
     'gemini-2.5-pro',
     'gemini-2.5-flash',
@@ -57,6 +70,9 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
 
   final FlutterTts _tts = FlutterTts();
 
+  /// Initialises the state of the "Teach-To-Learn" screen.
+  ///
+  /// Loads the lesson and TTS state for different voice preferences.
   @override
   void initState() {
     super.initState();
@@ -65,6 +81,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     _initTTS();
   }
 
+  /// Sets up the initial state of the TTS voice.
   Future<void> _initTTS() async {
     if (!kIsWeb) {
       await loadTtsVoice(); // Load saved voice from SharedPreferences
@@ -85,28 +102,30 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     }
   }
 
+  /// Disposes controllers when the widget is removed.
   @override
   void dispose() {
     _messageSub?.cancel();
     super.dispose();
   }
 
-  // TTS
+  /// Activates the Text-To-Speech, reading what is pressed (cleanedText).
   Future<void> _speak(String text) async {
     if (text.isEmpty) return;
 
     final cleanedText = _cleanTextForTTS(text);
 
-    _stopTTS(); // 🔥 prevent overlap
+    _stopTTS(); // Prevent overlap.
 
+    // Commented out due to flawed web functionality (web package not usable).
     if (kIsWeb) {
-      final savedVoice = {
-        "name": "Google UK English Female",
-        "locale": "en-GB"
-      };
-
-      await _tts.setVoice(savedVoice);
-      await _tts.speak(cleanedText);
+      // final savedVoice = {
+      //   "name": "Google UK English Female",
+      //   "locale": "en-GB"
+      // };
+      //
+      // await _tts.setVoice(savedVoice);
+      // await _tts.speak(cleanedText);
     } else {
       final savedVoice = ttsVoiceNotifier.value;
       if (savedVoice != null) {
@@ -116,6 +135,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     }
   }
 
+  /// Stops Text-To-Speech from talking.
   void _stopTTS() {
     if (kIsWeb) {
       // web.window.speechSynthesis.cancel();
@@ -124,6 +144,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     }
   }
 
+  /// Cleans up the TTS text to not verbally say symbols.
   String _cleanTextForTTS(String text) {
     return text
         .replaceAll(RegExp(r'\*+'), '')
@@ -135,10 +156,11 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
         .trim();
   }
 
-  // --------------------------------------------------
-  // MESSAGE STREAM
-  // --------------------------------------------------
-
+  /// Listens to real-time chat messages for the current lesson.
+  ///
+  /// Listens to a message stream from the backend and maps incoming data
+  /// into [ChatMessage] objects for UI display. Messages are assigned to
+  /// either the current user or the AI (Gemini) based on the sender field.
   void _listenToMessages() {
     _messageSub =
         _service.streamMessages(widget.lessonId).listen((messages) {
@@ -156,12 +178,12 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
             );
           }).toList();
 
-          /// 🔥 Detect newest Gemini message
+          // Detect newest Gemini message.
           if (_messages.isNotEmpty && newMessages.length > _messages.length) {
             final latest = newMessages.first;
 
             if (latest.user.id == _geminiUser.id) {
-              _speak(latest.text); // 🔊 AUTO READ AI
+              _speak(latest.text); // Auto play TTS on new Gemini messages.
             }
           }
 
@@ -171,6 +193,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
         });
   }
 
+  /// Loads an existing lesson.
   Future<void> _loadLesson() async {
     final lesson = await _service.getLesson(widget.lessonId);
 
@@ -186,8 +209,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
     }
   }
 
-  // ---------------- FLASHCARD GENERATION ----------------
-
+  /// Generates flashcards based on the lesson content.
   Future<void> _generateFlashcards(bool isPublic) async {
     try {
       final currentUser = FirebaseAuth.instance.currentUser;
@@ -198,6 +220,7 @@ class _TeachToLearnAIState extends State<TeachToLearnAi> {
         return "$role: ${msg.text}";
       }).join("\n");
 
+      // Provides rules to the AI model
       final prompt = """
 You are an expert educator.
 
@@ -224,8 +247,8 @@ $history
 
       if (!mounted) return;
 
+      // Prevents illegal structure for flashcard generation.
       String cleaned = response.trim();
-
       if (cleaned.startsWith("```")) {
         cleaned = cleaned
             .replaceAll("```json", "")
@@ -235,6 +258,7 @@ $history
 
       final List<dynamic> decoded = jsonDecode(cleaned);
 
+      // Add flashcard set to Firestore.
       final setRef = await FirebaseFirestore.instance
           .collection('flashcard_sets')
           .add({
@@ -246,6 +270,7 @@ $history
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // Add each individual flashcard to set in Firestore.
       for (var card in decoded) {
         await FirebaseFirestore.instance
             .collection('flashcard_sets')
@@ -259,6 +284,7 @@ $history
 
       if (!mounted) return;
 
+      // Popup for confirmation/error.
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Flashcards generated!")),
       );
@@ -277,6 +303,9 @@ $history
     }
   }
 
+  /// Displays popup for confirmation of flashcard generation
+  ///
+  /// Includes a switcher for creating public or private flashcard sets.
   Future<void> _showGeneratePopup() async {
     bool isPublic = false;
 
@@ -336,10 +365,11 @@ $history
     );
   }
 
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
-
+  /// Builds the user interface for a "Teach-To-Learn" lesson.
+  ///
+  /// Includes:
+  /// - Building the introduction screen for new lessons.
+  /// - Builds the chat UI once a lesson has started.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -357,10 +387,12 @@ $history
           ),
         ],
       ),
+      // Builds the screen based on if the lesson has started
       body: _lessonStarted ? _buildChatUI() : _buildIntroScreen(),
     );
   }
 
+  /// Builds the intro screen where a user inputs their topic.
   Widget _buildIntroScreen() {
     return Center(
       child: Padding(
@@ -417,6 +449,8 @@ $history
     );
   }
 
+  /// Builds the UI for the actual lesson structure using the
+  /// Dash_Chat_2 Flutter package.
   Widget _buildChatUI() {
     return Stack(
       children: [
@@ -427,13 +461,16 @@ $history
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               color: Colors.amber.shade200,
+              // AI can make mistakes warning.
               child: Text(
-                "Topic: $_currentTopic\n⚠️ Gemini can make mistakes. Verify Important Information!",
+                "Topic: $_currentTopic\n⚠️ Gemini can make mistakes. "
+                    "Verify Important Information!",
                 textAlign: TextAlign.center,
                 style: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
 
+            // Generate flashcards button.
             Align(
               alignment: Alignment.centerRight,
               child: Padding(
@@ -447,8 +484,10 @@ $history
             ),
 
             Expanded(
+              // Dash Chat service UI.
               child: DashChat(
                 currentUser: _currentUser,
+                // Shows "Gemini is typing..." indicator when enabled.
                 typingUsers: _typingUser,
                 onSend: (ChatMessage m) {
                   getChatResponse(m);
@@ -459,10 +498,10 @@ $history
                   messageTextBuilder: (message, previousMessage, nextMessage) {
                     final isUser = message.user.id == _currentUser.id;
 
+                    // Individual Message UI.
                     return Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        /// TEXT
                         Expanded(
                           child: Text(
                             message.text,
@@ -474,7 +513,7 @@ $history
 
                         const SizedBox(width: 6),
 
-                        /// 🔊 TTS BUTTON
+                        //TTS BUTTON
                         GestureDetector(
                           onTap: () => _speak(message.text),
                           child: Icon(
@@ -492,7 +531,7 @@ $history
           ],
         ),
 
-        // ✅ FULLSCREEN LOADING
+        // Loading indicator for generation of flashcards.
         if (_isGeneratingFlashcards)
           Container(
             color: Colors.black.withOpacity(0.4),
@@ -514,10 +553,9 @@ $history
     );
   }
 
-  // --------------------------------------------------
-  // START LESSON
-  // --------------------------------------------------
+  // Gemini teach to learn prompts and calls. Firestore backend message saving.
 
+  /// Starts the lesson once a topic is chose.
   Future<void> _startLesson(String topic) async {
 
     await FirebaseFirestore.instance
@@ -538,6 +576,7 @@ $history
 
       try {
 
+        // Initial prompt.
         final responseText = await generateGeminiResponse("""
 You are participating in a Teach-To-Learn session.
 
@@ -567,6 +606,7 @@ Continuously push the student toward a complete and correct understanding.
 Start by saying you are ready to learn and ask the student to begin explaining.
 """);
 
+        // Add the message to the lesson in Firestore.
         await _service.addMessage(
           lessonId: widget.lessonId,
           text: responseText,
@@ -575,6 +615,7 @@ Start by saying you are ready to learn and ask the student to begin explaining.
 
       } catch (e) {
 
+        // Initial Gemini message
         await _service.addMessage(
           lessonId: widget.lessonId,
           text: "Ready! Please start teaching me about $topic",
@@ -591,10 +632,7 @@ Start by saying you are ready to learn and ask the student to begin explaining.
     });
   }
 
-  // --------------------------------------------------
-  // CHAT RESPONSE (UPDATED WITH HISTORY)
-  // --------------------------------------------------
-
+  /// Generates a Gemini response based on prior message history.
   Future<void> getChatResponse(ChatMessage m) async {
 
     try {
@@ -644,10 +682,10 @@ EXTRA TIPS:
 - Assume the student remembers all prior explanations.
 - Do not repeat or re-summarize unless explicitly asked.
 - Ask about the next concept or missing piece only.
-- Never loop back to a topic that’s already resolved.
+- Never loop back to a topic that’s already resolved in the conversation so far.
 
 Do NOT:
-- Repeat the same correction multiple times
+- Repeat the same correction multiple times.
 - Bring up past mistakes unless directly relevant
 - Ask the same question multiple times (even if not strictly answered)
 
@@ -655,14 +693,15 @@ Goal:
 Continuously push the student toward a complete and correct understanding.
 """);
 
+      // Add message to Firestore.
       await _service.addMessage(
         lessonId: widget.lessonId,
         text: responseText,
         sender: "gemini",
       );
 
+      // "Gemini is not available" error handling.
     } catch (e) {
-
       await _service.addMessage(
         lessonId: widget.lessonId,
         text: "Error: $e",
@@ -679,16 +718,15 @@ Continuously push the student toward a complete and correct understanding.
     }
   }
 
-  // --------------------------------------------------
-  // GEMINI API
-  // --------------------------------------------------
-
+  /// Calls to the external Gemini API to generate a response.
   Future<String> generateGeminiResponse(String prompt) async {
+    // Number of retries allowed on a fault.
     const maxRetries = 2;
 
     for (final model in models) {
       final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$geminiApiKey',
+        'https://generativelanguage.googleapis.com/v1beta/models'
+            '/$model:generateContent?key=$geminiApiKey',
       );
 
       for (int attempt = 0; attempt < maxRetries; attempt++) {
@@ -709,13 +747,13 @@ Continuously push the student toward a complete and correct understanding.
 
           print("[$model] status: ${response.statusCode}");
 
-          // ✅ success
+          // Success.
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
             return data['candidates'][0]['content']['parts'][0]['text'];
           }
 
-          // 🔥 overload / rate limit → retry same model
+          // Overloaded model / rate limit -> retry same model.
           if (response.statusCode == 503 || response.statusCode == 429) {
             final delay = Duration(seconds: 2 * (attempt + 1));
             print("[$model] overloaded → retry in ${delay.inSeconds}s");
@@ -723,7 +761,7 @@ Continuously push the student toward a complete and correct understanding.
             continue;
           }
 
-          // ❌ other error → break to next model
+          // Other error -> break to next model.
           print("[$model] failed: ${response.body}");
           break;
 
@@ -736,6 +774,7 @@ Continuously push the student toward a complete and correct understanding.
       print("Switching from $model to fallback...");
     }
 
+    // Fallback error message for most likely issue (high demand (503)).
     return "Gemini is busy right now. Try again in a moment.";
   }
 }

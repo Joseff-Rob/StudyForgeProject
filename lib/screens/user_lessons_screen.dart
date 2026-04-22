@@ -3,7 +3,14 @@ import 'package:flutter/material.dart';
 import '../services/teach_to_learn_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Class that shows a list of the current users AI "Teach-To-Learn" lessons.
+///
+/// Includes:
+/// - Clear, well-formatted list of owned lessons.
+/// - Lesson deletion.
 class UserLessonsScreen extends StatefulWidget {
+
+  /// Creates a [UserLessonsScreen].
   const UserLessonsScreen({super.key});
 
   @override
@@ -15,6 +22,7 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
   final TeachToLearnService _lessonService =
   TeachToLearnService();
 
+  /// Deletes the selected discussion.
   Future<void> _deleteLesson(String lessonId) async {
     try {
       await _lessonService.deleteLesson(lessonId);
@@ -30,6 +38,7 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
     }
   }
 
+  /// Builds the UI for a list of owned lessons and deletion capabilities.
   @override
   Widget build(BuildContext context) {
 
@@ -41,6 +50,7 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
         backgroundColor: Colors.blueGrey,
       ),
 
+      // Not logged in fallback error.
       body: user == null
           ? const Center(
         child: Text("Please login to view lessons"),
@@ -57,6 +67,7 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
             );
           }
 
+          // Error fallback.
           if (snapshot.hasError) {
             return const Center(
               child: Text("Error loading lessons"),
@@ -65,6 +76,7 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
 
           final lessons = snapshot.data ?? [];
 
+          // No existing lessons fallback.
           if (lessons.isEmpty) {
             return const Center(
               child: Text("No lessons yet"),
@@ -80,22 +92,22 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
               final lesson = lessons[index];
 
               final topic =
-                  lesson['topic']?.toString() ??
-                      "Untitled Lesson";
+                  lesson['topic']?.toString() ?? "Untitled Lesson";
 
               final count =
-                  lesson['messageCount']?.toString() ??
-                      "0";
+                  lesson['messageCount']?.toString() ?? "0";
 
               return GestureDetector(
-                onLongPress: () async {
 
+                // Long press to delete set (With confirmation dialog).
+                onLongPress: () async {
                   final confirm = await showDialog<bool>(
                     context: context,
                     builder: (context) => AlertDialog(
                       title: const Text("Delete Lesson?"),
                       content: const Text(
-                          "This will permanently delete this lesson."),
+                          "This will permanently delete this lesson."
+                      ),
                       actions: [
                         TextButton(
                           onPressed: () =>
@@ -115,10 +127,12 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
                   );
 
                   if (confirm == true) {
+                    // Delete selected lesson.
                     await _deleteLesson(lesson['id']);
                   }
                 },
 
+                // Formatted card for each owned lesson.
                 child: Card(
                   elevation: 2,
                   shape: RoundedRectangleBorder(
@@ -140,6 +154,7 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
                     onTap: () {
                       Navigator.push(
                         context,
+                        // Navigate to existing lesson.
                         MaterialPageRoute(
                           builder: (_) => TeachToLearnAi(
                             lessonId: lesson['id'],

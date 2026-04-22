@@ -16,7 +16,8 @@ class FlashcardGeneratorService {
 
     for (final model in models) {
       final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/$model:generateContent?key=$geminiApiKey',
+        'https://generativelanguage.googleapis.com/v1beta/models'
+            '/$model:generateContent?key=$geminiApiKey',
       );
 
       for (int attempt = 0; attempt < maxRetries; attempt++) {
