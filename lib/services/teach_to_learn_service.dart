@@ -1,12 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+/// Class to handle Firestore backend actions for AI "Teach-To-Learn lessons.
 class TeachToLearnService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ------------------------
-  // CREATE LESSON
-  // ------------------------
+  /// Creates a AI lesson with a specified topic.
   Future<String> createLesson({required String topic}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception("Not logged in");
@@ -22,9 +21,7 @@ class TeachToLearnService {
     return docRef.id;
   }
 
-  // ------------------------
-  // ADD MESSAGE
-  // ------------------------
+  /// Adds an individual message to the discussion.
   Future<void> addMessage({
     required String lessonId,
     required String text,
@@ -48,9 +45,10 @@ class TeachToLearnService {
     });
   }
 
-  // ------------------------
-  // STREAM USER LESSONS
-  // ------------------------
+  /// Streams lessons for the current logged in user in real time.
+  ///
+  /// This enables the UI to reactively update whenever lessons are created,
+  /// or deleted in Firestore.
   Stream<List<Map<String, dynamic>>> streamUserLessons() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const Stream.empty();
@@ -69,9 +67,9 @@ class TeachToLearnService {
     });
   }
 
-  // ------------------------
-  // STREAM MESSAGES IN LESSON
-  // ------------------------
+  /// Streams Messages for a given AI lesson in real time.
+  ///
+  /// This enables the UI to reactively update whenever messages in Firestore.
   Stream<List<Map<String, dynamic>>> streamMessages(String lessonId) {
     return _firestore
         .collection('teach_lessons')
@@ -88,9 +86,7 @@ class TeachToLearnService {
     });
   }
 
-  // ------------------------
-  // DELETE LESSON
-  // ------------------------
+  /// Deletes a selected lesson from the Firestore collection.
   Future<void> deleteLesson(String lessonId) async {
     final lessonRef =
     _firestore.collection('teach_lessons').doc(lessonId);
@@ -119,6 +115,10 @@ class TeachToLearnService {
     };
   }
 
+  /// Retrieves all messages for a lesson.
+  ///
+  /// Unlike a stream, this method performs a single read operation and
+  /// does not listen for real-time updates.
   Future<List<Map<String, dynamic>>> getMessagesOnce(String lessonId) async {
     final snapshot = await FirebaseFirestore.instance
         .collection('teach_lessons')

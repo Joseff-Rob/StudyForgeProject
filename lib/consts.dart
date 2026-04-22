@@ -1,1 +1,2 @@
+/// Gemini MODEL API KEY.
 const GEMINI_API_KEY = "AIzaSyAB4NdZyr9lEHfyldqrxnQ-0we5SPzaaV0";

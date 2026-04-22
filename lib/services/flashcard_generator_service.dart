@@ -1,16 +1,20 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
+/// Class to handle the call to the external Gemini API to generate flashcard
+/// sets based on raw text.
 class FlashcardGeneratorService {
   final String geminiApiKey;
 
   FlashcardGeneratorService({required this.geminiApiKey});
 
+  /// Two models for fallback capabilities.
   final List<String> models = [
     'gemini-2.5-pro',
     'gemini-2.5-flash'
   ];
 
+  /// Generates flashcard sets based on raw text.
   Future<List<Map<String, String>>> generateFlashcards(String text) async {
     const maxRetries = 2;
 

@@ -8,12 +8,16 @@ import 'screens/splash_screen.dart';
 import 'screens/main_menu.dart';
 import 'screens/login_register.dart';
 
+/// Initial build of the application.
+///
+/// Starting screen depends if user is logged in or not.
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  // Loads "shared_preferences" (font scaling & TTS voice).
   await loadFontScale();
   await loadTtsVoice();
 
@@ -23,6 +27,7 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+  /// Navigates to the initial screen (SPLASH SCREEN)
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<double>(
@@ -32,7 +37,7 @@ class MyApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'StudyForge',
           theme: ThemeData(
-            fontFamily: 'NotoSans', // 👈 ADD THIS
+            fontFamily: 'NotoSans',
           ),
           builder: (context, child) {
             return MediaQuery(
@@ -43,7 +48,7 @@ class MyApp extends StatelessWidget {
             );
           },
 
-          // 👇 Start with splash
+          // Start with splash
           home: const SplashScreen(),
         );
       },
@@ -51,7 +56,11 @@ class MyApp extends StatelessWidget {
   }
 }
 
-/// 🔥 CENTRAL AUTH ROUTER
+/// Central Authentication Router
+///
+/// Navigates to:
+/// - Login/Register page if logged out.
+/// - Main Menu if logged in.
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
 
@@ -60,19 +69,21 @@ class AuthGate extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
 
-        // Logged in
+        // Logged in -> Navigate to Main Menu after splash screen animation.
         if (snapshot.hasData) {
           return const MainMenu();
         }
 
-        // Logged out
+        /*
+         * Logged out -> Navigate to Login/Register
+         * page after splash screen animation.
+         */
         return const LoginRegisterPage();
       },
     );

@@ -8,14 +8,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../models/quiz_question.dart';
 import 'flashcard_generator_service.dart';
 
-
+/// Class to handle Firestore backend calls.
 class FlashcardService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ------------------------
-  // CREATE FLASHCARD SET
-  // ------------------------
-  Future<String> createFlashcardSet({required String title, bool isPublic = false}) async {
+  /// Function to create a flashcard set in Firestore.
+  Future<String> createFlashcardSet(
+      {required String title, bool isPublic = false}) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) throw Exception("Not logged in");
 
@@ -32,9 +31,7 @@ class FlashcardService {
     return docRef.id;
   }
 
-  // ------------------------
-  // ADD FLASHCARD TO SET
-  // ------------------------
+  /// Add flashcard to set in Firestore.
   Future<void> addFlashcard({
     required String setId,
     required String question,
@@ -61,9 +58,10 @@ class FlashcardService {
     });
   }
 
-  // ------------------------
-  // STREAM FLASHCARDS IN A SET
-  // ------------------------
+  /// Streams flashcards for a given flashcard set in real time.
+  ///
+  /// This enables the UI to reactively update whenever flashcards are added,
+  /// modified, or deleted in Firestore.
   Stream<List<Map<String, dynamic>>> streamFlashcards(String setId) {
     final flashcardRef =
     _firestore.collection('flashcard_sets').doc(setId).collection('flashcards');
@@ -77,9 +75,10 @@ class FlashcardService {
     });
   }
 
-  // ------------------------
-  // GET FLASHCARD SETS FOR CURRENT USER
-  // ------------------------
+  /// Streams flashcard sets owned by the current user in real time.
+  ///
+  /// This enables the UI to reactively update whenever a list of owned sets is
+  /// updated.
   Stream<List<Map<String, dynamic>>> streamUserFlashcardSets() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return const Stream.empty();
@@ -98,7 +97,12 @@ class FlashcardService {
     });
   }
 
-  Stream<List<Map<String, dynamic>>> streamFlashcardSetsForProfile(String viewedUserId) {
+  /// Streams flashcard sets owned by a specified user in real time.
+  ///
+  /// This enables the UI to reactively update whenever the list of sets is
+  /// updated.
+  Stream<List<Map<String, dynamic>>> streamFlashcardSetsForProfile(
+      String viewedUserId) {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return const Stream.empty();
 
@@ -122,12 +126,14 @@ class FlashcardService {
     });
   }
 
+  /// Updates the title of the flashcard set.
   Future<void> updateFlashcardSetTitle(String setId, String newTitle) async {
     await _firestore.collection('flashcard_sets').doc(setId).update({
       'title': newTitle,
     });
   }
 
+  /// Updates the term and definition of a given flashcard within an owned set.
   Future<void> updateFlashcard({
     required String setId,
     required String flashcardId,
@@ -145,6 +151,7 @@ class FlashcardService {
     });
   }
 
+  /// Updated publicity (private/public) of a flashcard set.
   Future<void> updateFlashcardSetIsPublic(String setId, bool isPublic) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
@@ -157,13 +164,19 @@ class FlashcardService {
     });
   }
 
-  Stream<DocumentSnapshot<Map<String, dynamic>>> streamFlashcardSet(String setId) {
+  /// Streams a single flashcard set in real time
+  ///
+  /// This enables the UI to reactively update whenever a flashcard set is
+  /// modified.
+  Stream<DocumentSnapshot<Map<String, dynamic>>> streamFlashcardSet(
+      String setId) {
     return _firestore
         .collection('flashcard_sets')
         .doc(setId)
         .snapshots();
   }
 
+  /// Deletes a flashcard from a set based on set and flashcard ID.
   Future<void> deleteFlashcard({
     required String setId,
     required String flashcardId,
@@ -183,6 +196,7 @@ class FlashcardService {
     });
   }
 
+  /// Deletes a full flashcard set and all its contained flashcards.
   Future<void> deleteFlashcardSet(String setId) async {
     final setRef =
     _firestore.collection('flashcard_sets').doc(setId);
@@ -200,11 +214,13 @@ class FlashcardService {
     await setRef.delete();
   }
 
+  /// Generates a quiz based on a flashcard set
   Future<List<QuizQuestion>> generateQuizFromSet(
       String setId, {
         int optionsPerQuestion = 4,
         int? questionLimit
       }) async {
+    // Reads a flashcard set.
     final snapshot = await _firestore
         .collection('flashcard_sets')
         .doc(setId)
@@ -233,9 +249,10 @@ class FlashcardService {
     List<QuizQuestion> quiz = [];
 
     for (var card in selectedQuestions) {
+      // Collect correct answer.
       final correctAnswer = card['answer'];
 
-      // collect wrong answers
+      // Collect wrong answers.
       List<String> wrongAnswers = flashcards
           .where((f) => f['answer'] != correctAnswer)
           .map((f) => f['answer']!)
@@ -250,6 +267,7 @@ class FlashcardService {
 
       options.shuffle();
 
+      // Adds each question to the quiz.
       quiz.add(
         QuizQuestion(
           question: card['question']!,
@@ -261,6 +279,7 @@ class FlashcardService {
     return quiz;
   }
 
+  /// Calls to [FlashcardGeneratorService] to generate flashcards from raw text.
   Future<void> importTextAsFlashcards({
     required String rawText,
     required String setTitle,
