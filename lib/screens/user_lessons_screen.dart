@@ -26,7 +26,6 @@ class _UserLessonsScreenState extends State<UserLessonsScreen> {
   Future<void> _deleteLesson(String lessonId) async {
     try {
       await _lessonService.deleteLesson(lessonId);
-
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(

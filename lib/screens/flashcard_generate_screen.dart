@@ -212,7 +212,6 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
                   ],
                 ),
               ),
-
               const SizedBox(height: 20),
 
               Row(

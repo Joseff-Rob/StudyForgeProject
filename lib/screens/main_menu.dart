@@ -338,7 +338,6 @@ class _MainMenuState extends State<MainMenu> {
         return Scaffold(
           backgroundColor: isAdmin ? const Color(0xFFFFCDD2)
               : const Color(0xFFDCE6F0),
-
           // Menu Drawer
           endDrawer: SizedBox(
             width: MediaQuery.of(context).size.width * 0.75,

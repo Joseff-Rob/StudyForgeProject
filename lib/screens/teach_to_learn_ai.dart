@@ -628,7 +628,6 @@ Start by saying you are ready to learn and ask the student to begin explaining.
           _typingUser.remove(_geminiUser);
         });
       }
-
     });
   }
 
@@ -636,7 +635,6 @@ Start by saying you are ready to learn and ask the student to begin explaining.
   Future<void> getChatResponse(ChatMessage m) async {
 
     try {
-
       await _service.addMessage(
         lessonId: widget.lessonId,
         text: m.text,

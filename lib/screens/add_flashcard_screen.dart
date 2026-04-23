@@ -118,7 +118,6 @@ class _AddFlashcardScreenState extends State<AddFlashcardScreen> {
                   question: questionController.text.trim(),
                   answer: answerController.text.trim(),
                 );
-
                 Navigator.pop(context);
               },
               child: const Text("Save"),

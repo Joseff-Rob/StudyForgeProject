@@ -299,7 +299,6 @@ class _QuizScreenState extends State<QuizScreen>
                 parent: _optionControllers[option]!,
                 curve: Curves.easeOut,
               ));
-
               return AnimatedBuilder(
                 animation: Listenable.merge([_shakeController, scale]),
                 builder: (context, child) {
@@ -310,7 +309,6 @@ class _QuizScreenState extends State<QuizScreen>
                     // shake animation
                     offset = 8 * sin(_shakeController.value * pi * 4);
                   }
-
                   return Transform.translate(
                     offset: Offset(offset, 0),
                     child: Transform.scale(
