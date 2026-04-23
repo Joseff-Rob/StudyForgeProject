@@ -168,145 +168,145 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text("AI Flashcard Generator"),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          children: [
-            // Title field
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(
-                labelText: "Flashcard Set Title",
-                border: OutlineInputBorder(),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.only(
+            left: 20,
+            right: 20,
+            top: 20,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: "Flashcard Set Title",
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisSize: MainAxisSize.min, // shrink to fit content
-              children: [
-                const Text(
-                  "Make Public",
-                  style: TextStyle(fontSize: 16),
-                ),
-                const SizedBox(width: 10),
-                // publicity switcher
-                Switch(
-                  value: _isPublic,
-                  onChanged: (value) {
-                    setState(() {
-                      _isPublic = value;
-                    });
-                  },
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+              const SizedBox(height: 10),
 
-            Row(
-              children: [
-                // Upload .txt file button
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: pickTxtFile,
-                    icon: const Icon(Icons.upload_file),
-                    label: const Text("Upload .txt"),
-                  ),
+              Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Make Public",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(width: 10),
+                    Switch(
+                      value: _isPublic,
+                      onChanged: (value) {
+                        setState(() {
+                          _isPublic = value;
+                        });
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 10),
+              ),
 
-                // Generate cards button
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: generateFlashcards,
-                    icon: const Icon(Icons.auto_awesome),
-                    label: const Text("Generate"),
-                  ),
-                ),
-              ],
-            ),
+              const SizedBox(height: 20),
 
-            const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: pickTxtFile,
+                      icon: const Icon(Icons.upload_file),
+                      label: const Text("Upload .txt"),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: generateFlashcards,
+                      icon: const Icon(Icons.auto_awesome),
+                      label: const Text("Generate"),
+                    ),
+                  ),
+                ],
+              ),
 
-            // Display file name with removal capability
-            if (_uploadedFileName != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 8
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.grey[200],
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _uploadedFileName!,
-                          style: const TextStyle(fontSize: 16),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _uploadedFileName = null;
-                            _textController.clear();
-                          });
-                        },
-                        child: const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Icon(
-                            Icons.close,
-                            size: 20,
-                            color: Colors.red,
+              const SizedBox(height: 10),
+
+              if (_uploadedFileName != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            _uploadedFileName!,
+                            style: const TextStyle(fontSize: 16),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
-                    ],
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _uploadedFileName = null;
+                              _textController.clear();
+                            });
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Icon(
+                              Icons.close,
+                              size: 20,
+                              color: Colors.red,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Digital notes text field
-            Expanded(
-              child: TextField(
+              TextField(
                 controller: _textController,
-                maxLines: null,
-                expands: true,
+                minLines: 8,
+                maxLines: 20,
                 decoration: const InputDecoration(
                   hintText: "Paste your study notes here...",
                   border: OutlineInputBorder(),
                 ),
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 20),
 
-            // Gemini Warner button for mistakes.
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              color: Colors.amber.shade200,
-              child: Text(
-                "⚠️ Gemini can make mistakes. Verify Important Information!",
-                textAlign: TextAlign.center,
-                style: const TextStyle(fontWeight: FontWeight.w600),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                color: Colors.amber.shade200,
+                child: const Text(
+                  "⚠️ Gemini can make mistakes. Verify Important Information!",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
-            ),
 
-            // Display generated cards.
-            if (generatedCards.isNotEmpty)
-              Expanded(
-                child: ListView.builder(
+              if (generatedCards.isNotEmpty)
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: generatedCards.length,
                   itemBuilder: (context, index) {
                     final card = generatedCards[index];
@@ -319,32 +319,32 @@ class _FlashcardGenerateScreenState extends State<FlashcardGenerateScreen> {
                     );
                   },
                 ),
-              ),
 
-            const SizedBox(height: 10),
+              const SizedBox(height: 10),
 
-            // Save flashcard set button.
-            if (generatedCards.isNotEmpty)
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: saveFlashcards,
-                  icon: const Icon(Icons.save),
-                  label: const Text("Save Flashcard Set"),
+              if (generatedCards.isNotEmpty)
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: saveFlashcards,
+                    icon: const Icon(Icons.save),
+                    label: const Text("Save Flashcard Set"),
+                  ),
                 ),
-              ),
-            const SizedBox(height: 20),
 
-            // Loading animation.
-            if (loading)
-              const Padding(
-                padding: EdgeInsets.all(10),
-                child: CircularProgressIndicator(),
-              )
-          ],
+              const SizedBox(height: 20),
+
+              if (loading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(10),
+                    child: CircularProgressIndicator(),
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
-
     );
   }
 }

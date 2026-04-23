@@ -59,7 +59,7 @@ $text
 
           print("[$model] flashcards status: ${response.statusCode}");
 
-          // ✅ success
+          // Success
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
 
@@ -77,14 +77,14 @@ $text
                 .toList();
           }
 
-          // 🔥 overload → retry same model
+          // Overloaded -> retry same model
           if (response.statusCode == 503 || response.statusCode == 429) {
             final delay = Duration(seconds: 2 * (attempt + 1));
             await Future.delayed(delay);
             continue;
           }
 
-          // ❌ other error → switch model
+          // Other error -> switch model
           break;
 
         } catch (e) {
