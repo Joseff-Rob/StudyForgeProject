@@ -1,2 +1,2 @@
 /// Gemini MODEL API KEY.
-const GEMINI_API_KEY = "INPUT KEY";
+const GEMINI_API_KEY = "AIzaSyCKsKqOTtM8YMlfdtqCVp2703OhjV7Mo7w";
